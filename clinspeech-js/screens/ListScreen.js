@@ -1,123 +1,227 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import React from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    FlatList,
+    TouchableOpacity,
+    Platform,
+    Dimensions
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native'; // Чтобы обновлять список при возврате
 import { Ionicons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
+
+const TAB_HEIGHT = 65;
+const { height: WINDOW_HEIGHT } = Dimensions.get('window');
+
+const DATA = [
+    {
+        id: '1',
+        status: 'ready',
+        statusText: 'Готово',
+        date: '28.12.2025, 15:31',
+        name: 'Аббасов Р. Ш.',
+        diagnosis: 'Острый цистит',
+        doctor: 'Семейный врач (ВОП)',
+    },
+    {
+        id: '2',
+        status: 'sending',
+        statusText: 'Отправка',
+        date: '28.12.2025, 15:31',
+        name: 'Аббасов Р. Ш.',
+        diagnosis: 'Острый цистит',
+        doctor: 'Семейный врач (ВОП)',
+    },
+    {
+        id: '3',
+        status: 'error',
+        statusText: 'Ошибка сети',
+        date: '27.12.2025, 18:02',
+        name: 'Ибраев А. К.',
+        diagnosis: 'ОРВИ',
+        doctor: 'Терапевт',
+    },
+    {
+        id: '4',
+        status: 'draft',
+        statusText: 'Черновик',
+        date: '27.12.2025, 12:45',
+        name: 'Султанова М. Н.',
+        diagnosis: 'Хронический гастрит',
+        doctor: 'Гастроэнтеролог',
+    },
+    {
+        id: '5',
+        status: 'ready',
+        statusText: 'Готово',
+        date: '26.12.2025, 10:10',
+        name: 'Ахметов Д. С.',
+        diagnosis: 'Артериальная гипертензия',
+        doctor: 'Кардиолог',
+    },
+    {
+        id: '6',
+        status: 'sending',
+        statusText: 'Отправка',
+        date: '25.12.2025, 16:20',
+        name: 'Омарова А. Т.',
+        diagnosis: 'Сахарный диабет 2 типа',
+        doctor: 'Эндокринолог',
+    },
+    {
+        id: '7',
+        status: 'draft',
+        statusText: 'Черновик',
+        date: '24.12.2025, 09:05',
+        name: 'Касымов Н. Б.',
+        diagnosis: 'Боль в пояснице',
+        doctor: 'Невролог',
+    },
+];
+
+const statusColors = {
+    ready: '#2ECC71',
+    sending: '#F1C40F',
+    error: '#E74C3C',
+    draft: '#B0B0B0',
+};
 
 export default function ListScreen() {
-    const [recordings, setRecordings] = useState([]);
-    const [sound, setSound] = useState();
-    const [playingId, setPlayingId] = useState(null);
-
-    // Функция загрузки списка
-    const loadRecordings = async () => {
-        try {
-            const data = await AsyncStorage.getItem('my_recordings');
-            if (data) {
-                setRecordings(JSON.parse(data));
-            }
-        } catch (e) {
-            console.log(e);
-        }
-    };
-
-    // Обновляем список каждый раз, когда открываем этот экран
-    useFocusEffect(
-        useCallback(() => {
-            loadRecordings();
-            return () => {
-                if (sound) sound.unloadAsync(); // Останавливаем звук при уходе
-            };
-        }, [])
-    );
-
-    // Проигрывание звука из списка
-    async function playRecording(uri, id) {
-        if (playingId === id && sound) {
-            // Если нажали на тот же трек - пауза/стоп
-            await sound.stopAsync();
-            setPlayingId(null);
-            return;
-        }
-
-        // Если играет другой трек - выгружаем
-        if (sound) {
-            await sound.unloadAsync();
-        }
-
-        const { sound: newSound } = await Audio.Sound.createAsync({ uri });
-        setSound(newSound);
-        setPlayingId(id);
-        await newSound.playAsync();
-
-        // Когда трек закончится
-        newSound.setOnPlaybackStatusUpdate((status) => {
-            if (status.didJustFinish) {
-                setPlayingId(null);
-            }
-        });
-    }
-
     const renderItem = ({ item }) => (
-        <View style={styles.card}>
-            <View style={styles.cardInfo}>
-                <Text style={styles.cardTitle}>{item.name}</Text>
-                <Text style={styles.cardDate}>{item.date}</Text>
+        <TouchableOpacity style={styles.card} activeOpacity={0.8}>
+            <View style={styles.cardHeader}>
+                <View style={styles.statusRow}>
+                    <View
+                        style={[
+                            styles.statusDot,
+                            { backgroundColor: statusColors[item.status] }
+                        ]}
+                    />
+                    <Text
+                        style={[
+                            styles.statusText,
+                            { color: statusColors[item.status] }
+                        ]}
+                    >
+                        {item.statusText}
+                    </Text>
+                </View>
+                <Text style={styles.dateText}>{item.date}</Text>
             </View>
-            <TouchableOpacity onPress={() => playRecording(item.uri, item.id)}>
-                <Ionicons
-                    name={playingId === item.id ? "pause-circle" : "play-circle"}
-                    size={48}
-                    color="#0088A4"
-                />
-            </TouchableOpacity>
-        </View>
+
+            <View style={styles.cardBody}>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.nameText}>{item.name}</Text>
+                    <Text style={styles.infoText}>{item.diagnosis}</Text>
+                    <Text style={styles.infoText}>{item.doctor}</Text>
+                </View>
+
+                <Ionicons name="chevron-forward" size={26} color="#000" />
+            </View>
+        </TouchableOpacity>
     );
 
     return (
         <View style={styles.container}>
-            <LinearGradient colors={['#AFF1FF', '#00C0E8']} style={StyleSheet.absoluteFill} />
-
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>Мои Записи</Text>
-            </View>
-
-            <FlatList
-                data={recordings}
-                keyExtractor={(item) => item.id}
-                renderItem={renderItem}
-                contentContainerStyle={styles.listContent}
-                ListEmptyComponent={
-                    <Text style={styles.emptyText}>Пока нет записей</Text>
-                }
+            <LinearGradient
+                colors={['#B8F4FF', '#00B4DB']}
+                style={StyleSheet.absoluteFill}
             />
+
+            <Text style={styles.title}>Последние записи</Text>
+
+            {/* ✅ WEB-СКРОЛЛ РЕАЛЬНО РАБОТАЕТ */}
+            <View style={styles.scrollContainer}>
+                <FlatList
+                    data={DATA}
+                    keyExtractor={(item) => item.id}
+                    renderItem={renderItem}
+                    contentContainerStyle={styles.list}
+                    showsVerticalScrollIndicator
+                />
+            </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1 },
-    header: { paddingTop: 60, paddingBottom: 20, alignItems: 'center' },
-    headerTitle: { fontSize: 24, fontWeight: 'bold', color: 'white' },
-    listContent: { padding: 20 },
+    container: {
+        flex: 1,
+    },
+    title: {
+        marginTop: 60,
+        marginBottom: 20,
+        textAlign: 'center',
+        fontSize: 22,
+        fontWeight: '500',
+        color: '#000',
+    },
+
+    /* 🔥 КЛЮЧЕВОЙ КОНТЕЙНЕР */
+    scrollContainer: {
+        height:
+            Platform.OS === 'web'
+                ? WINDOW_HEIGHT - TAB_HEIGHT - 120
+                : '100%',
+        overflowY: Platform.OS === 'web' ? 'auto' : 'visible',
+    },
+
+    list: {
+        paddingHorizontal: 16,
+        paddingBottom: TAB_HEIGHT + 20,
+    },
+
     card: {
-        backgroundColor: 'rgba(255,255,255,0.9)',
-        borderRadius: 15,
-        padding: 15,
-        marginBottom: 10,
+        backgroundColor: '#fff',
+        borderRadius: 14,
+        padding: 14,
+        marginBottom: 12,
+        shadowColor: '#000',
+        shadowOpacity: 0.12,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 3 },
+        elevation: 4,
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    statusRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
     },
-    cardInfo: { flex: 1 },
-    cardTitle: { fontSize: 18, color: '#005864', fontWeight: 'bold' },
-    cardDate: { fontSize: 14, color: '#666', marginTop: 4 },
-    emptyText: { textAlign: 'center', color: 'white', marginTop: 50, fontSize: 18 }
+    statusDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        marginRight: 6,
+    },
+    statusText: {
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    dateText: {
+        fontSize: 13,
+        color: '#333',
+    },
+    cardBody: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    nameText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#000',
+    },
+    infoText: {
+        fontSize: 14,
+        color: '#333',
+        marginTop: 2,
+    },
+
 });
+
+//List exampledsfsefпаыуа
