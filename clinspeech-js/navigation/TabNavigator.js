@@ -12,7 +12,6 @@ import { tabStyles } from '../styles/TabStyles';
 const Tab = createBottomTabNavigator();
 const HomeStack = createStackNavigator();
 
-// --- 1. Вложенный стек для Главной вкладки (чтобы TabBar не пропадал) ---
 function HomeStackNavigator() {
     return (
         <HomeStack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
@@ -167,7 +166,7 @@ function CustomTabBar({ state, navigation }) {
                         let imageSource;
                         if (route.name === 'Главная') imageSource = require('../assets/home.png');
                         else if (route.name === 'Архив') imageSource = require('../assets/archive.png');
-                        else if (route.name === 'Шаблоны') imageSource = require('../assets/template.png');
+                        else if (route.name === 'Пациенты') imageSource = require('../assets/template.png');
                         else if (route.name === 'Профиль') imageSource = require('../assets/profile.png');
 
                         return (
