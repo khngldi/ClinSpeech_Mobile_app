@@ -31,15 +31,11 @@ function CustomTabBar({ state, navigation }) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const animation = useRef(new Animated.Value(0)).current;
 
-    // --- 2. Логика определения текущего под-экрана ---
     const currentRoute = state.routes[state.index];
     const isMainTabFocused = currentRoute.name === 'Главная';
 
-    // Получаем имя активного экрана внутри стека 'Главная'
-    // Если routeName undefined, значит мы на первом экране стека (HomeRecord)
     const focusedRouteName = getFocusedRouteNameFromRoute(currentRoute) ?? 'HomeRecord';
 
-    // Определяем, какая кнопка подменю активна
     let activeSubOption = '';
     if (isMainTabFocused) {
         if (focusedRouteName === 'HomeRecord') activeSubOption = 'Записать';
@@ -66,15 +62,12 @@ function CustomTabBar({ state, navigation }) {
     };
 
     const handleSubMenuPress = (action) => {
-        // Не закрываем меню сразу, если хочешь видеть переход,
-        // но обычно лучше закрыть для чистоты UI:
+
         toggleMenu(false);
 
         if (action === 'Записать') {
-            // Переход на экран Записи внутри стека Главная
             navigation.navigate('Главная', { screen: 'HomeRecord' });
         } else if (action === 'Список') {
-            // Переход на экран Списка внутри стека Главная
             navigation.navigate('Главная', { screen: 'HomeList' });
         } else {
             Alert.alert(`Раздел ${action}`, "Этот экран в разработке");
@@ -159,8 +152,6 @@ function CustomTabBar({ state, navigation }) {
                         const isFocused = state.index === index;
                         const isMainButton = route.name === 'Главная';
 
-                        // Логика подсветки главной кнопки:
-                        // Она активна, если открыто меню ИЛИ если мы просто находимся на вкладке Главная (независимо от Record или List)
                         const showActiveBg = (isMainButton && isMenuOpen) || (isFocused && !isMenuOpen);
 
                         let imageSource;
@@ -198,14 +189,12 @@ function CustomTabBar({ state, navigation }) {
     );
 }
 
-// Экспорт основного навигатора
 export default function TabNavigator() {
     return (
         <Tab.Navigator
             tabBar={props => <CustomTabBar {...props} />}
             screenOptions={{ headerShown: false, animation: 'fade' }}
         >
-            {/* Вместо HomeScreen теперь ставим HomeStackNavigator */}
             <Tab.Screen name="Главная" component={HomeStackNavigator} />
 
             <Tab.Screen name="Архив" component={Placeholder} />

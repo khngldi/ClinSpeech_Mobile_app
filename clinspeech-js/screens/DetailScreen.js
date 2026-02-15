@@ -1,0 +1,376 @@
+import React, { useState } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    ScrollView,
+    TouchableOpacity,
+    SafeAreaView
+} from 'react-native';
+import { Ionicons, MaterialIcons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
+
+// Основной цвет приложения
+const PRIMARY_COLOR = '#00BFFF';
+
+// Компонент раскрывающегося списка (Аккордеон)
+const Accordion = ({ title, children, isOpenDefault = false }) => {
+    const [isOpen, setIsOpen] = useState(isOpenDefault);
+
+    return (
+        <View style={styles.accordionContainer}>
+            <TouchableOpacity
+                style={[styles.accordionHeader, !isOpen && styles.accordionHeaderClosed]}
+                onPress={() => setIsOpen(!isOpen)}
+                activeOpacity={0.8}
+            >
+                <Text style={styles.accordionTitle}>{title}</Text>
+                <Ionicons name={isOpen ? "chevron-up" : "chevron-down"} size={20} color="#FFF" />
+            </TouchableOpacity>
+            {isOpen && (
+                <View style={styles.accordionBody}>
+                    {children}
+                </View>
+            )}
+        </View>
+    );
+};
+
+export default function DetailScreen({ navigation }) {
+    // Фейковые данные для волн (высота полосок)
+    const waveHeights = [10, 20, 15, 30, 40, 25, 50, 70, 45, 80, 50, 90, 60, 40, 75, 50, 30, 45, 20, 15, 10];
+
+    return (
+        <SafeAreaView style={styles.safeArea}>
+            <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+
+                {/* --- HEADER --- */}
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation?.goBack()}>
+                        <Ionicons name="chevron-back" size={28} color="#000" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle} numberOfLines={1}>Чета там чета там</Text>
+                    <View style={styles.headerIcons}>
+                        <TouchableOpacity style={styles.iconButton}>
+                            <Ionicons name="star-outline" size={24} color="#FFD700" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.iconButton}>
+                            <Ionicons name="trash-outline" size={24} color="#FF4D4D" />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* --- STATUS & PLAYER --- */}
+                <View style={styles.playerSection}>
+                    <View style={styles.statusRow}>
+                        <View style={styles.statusDot} />
+                        <Text style={styles.statusText}>Готово</Text>
+                    </View>
+
+                    <Text style={styles.timeText}>10:15:25</Text>
+
+                    {/* Имитация аудиоволн */}
+                    <View style={styles.waveContainer}>
+                        {waveHeights.map((h, i) => (
+                            <View key={i} style={[styles.waveBar, { height: h }]} />
+                        ))}
+                    </View>
+
+                    <Text style={styles.fileName}>consult_16-10-2024_12-30.mp3</Text>
+
+                    {/* Прогресс бар */}
+                    <View style={styles.progressBarBackground}>
+                        <View style={styles.progressBarFill} />
+                        <View style={styles.progressThumb} />
+                    </View>
+
+                    {/* Кнопки плеера */}
+                    <View style={styles.playerControls}>
+                        <TouchableOpacity>
+                            <Ionicons name="play-skip-back" size={24} color={PRIMARY_COLOR} />
+                        </TouchableOpacity>
+                        <TouchableOpacity>
+                            <Ionicons name="play-circle" size={40} color={PRIMARY_COLOR} />
+                        </TouchableOpacity>
+                        <TouchableOpacity>
+                            <Ionicons name="play-skip-forward" size={24} color={PRIMARY_COLOR} />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* --- ACCORDIONS (Медицинские данные) --- */}
+                <Accordion title="Общие данные" isOpenDefault={true}>
+                    <Text style={styles.bodyText}>ФИО: Чето там чета там чета таааам</Text>
+                    <Text style={styles.bodyText}>ИИН: 130311504603</Text>
+                    <Text style={styles.bodyText}>Возраст: ** лет</Text>
+                    <Text style={styles.bodyText}>Дата: 19.11.2024 (Время: 09:56)</Text>
+                    <Text style={styles.bodyText}>Врач: Семейный врач (Врач общей практики) – организация ТОО "блаблабла"</Text>
+                </Accordion>
+
+                <Accordion title="Юридическая информация">
+                    <Text style={styles.bodyText}>Организация: ТОО "блаблабла"</Text>
+                    <Text style={styles.bodyText}>БСН (БИН): 2526262682682</Text>
+                    <Text style={styles.bodyText}>Форма: №052/у (Утв. приказом МЗ РК № ҚР ДСМ-175/2020 от 30.10.2020)</Text>
+                </Accordion>
+
+                <Accordion title="Клиническая картина">
+                    <Text style={styles.bodyText}><Text style={styles.boldText}>ЖАЛОБЫ ПАЦИЕНТА:</Text>{'\n'}На жжение и/или болезненное мочеиспускание (дизурия), частые настоятельные позывы...</Text>
+                </Accordion>
+
+                <Accordion title="Диагноз (МКБ-10)">
+                    <Text style={styles.bodyText}>Диагноз: Острый цистит</Text>
+                </Accordion>
+
+                <Accordion title="Лечение и назначение">
+                    <Text style={styles.bodyText}>1. АНТИБАКТЕРИАЛЬНАЯ ТЕРАПИЯ (Основная):</Text>
+                    <Text style={styles.bodyText}>• Цефтриаксон: по 1.0 мл х 1 раз в день...</Text>
+                </Accordion>
+
+                <Accordion title="Рекомендации и физиолечение">
+                    <Text style={styles.bodyText}>• Физиолечение показано.</Text>
+                    <Text style={styles.bodyText}>• Обильное питье, соблюдение диеты.</Text>
+                </Accordion>
+
+                <Accordion title="Подпись">
+                    <Text style={styles.bodyText}>Врач: Шахмуханбетов Ханкелді Ерболулы</Text>
+                </Accordion>
+
+                {/* --- BOTTOM ACTIONS --- */}
+                <View style={styles.actionRow}>
+                    <TouchableOpacity style={styles.actionButton}>
+                        <Text style={styles.actionButtonText}>ПОДРОБНЕЕ</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.actionButton}>
+                        <Text style={styles.actionButtonText}>ЭКСПОРТ PDF</Text>
+                    </TouchableOpacity>
+                </View>
+
+                <TouchableOpacity style={styles.createNewButton}>
+                    <Text style={styles.createNewText}>Создать новый на основе этого</Text>
+                </TouchableOpacity>
+
+                {/* Большой круглый FAB (Микрофон) */}
+                <View style={styles.fabContainer}>
+                    <View style={styles.fabOuterRing}>
+                        <View style={styles.fabInnerRing}>
+                            <TouchableOpacity style={styles.fabButton} activeOpacity={0.8}>
+                                <MaterialCommunityIcons name="microphone" size={45} color="#FFF" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+
+                <View style={{ height: 40 }} /> {/* Отступ снизу */}
+            </ScrollView>
+        </SafeAreaView>
+    );
+}
+
+const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+    },
+    container: {
+        flex: 1,
+        paddingHorizontal: 20,
+    },
+    // Header
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 10,
+        marginBottom: 20,
+    },
+    headerTitle: {
+        fontSize: 20,
+        fontWeight: '600',
+        color: '#000',
+        flex: 1,
+        marginLeft: 10,
+    },
+    headerIcons: {
+        flexDirection: 'row',
+    },
+    iconButton: {
+        marginLeft: 15,
+    },
+    // Player Section
+    playerSection: {
+        alignItems: 'center',
+        marginBottom: 30,
+    },
+    statusRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        marginBottom: 10,
+    },
+    statusDot: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: '#32CD32', // Зеленый
+        marginRight: 8,
+    },
+    statusText: {
+        fontSize: 18,
+        color: '#32CD32',
+        fontWeight: '500',
+    },
+    timeText: {
+        fontSize: 32,
+        color: PRIMARY_COLOR,
+        fontWeight: '300',
+        marginBottom: 15,
+    },
+    waveContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 100,
+        marginBottom: 10,
+    },
+    waveBar: {
+        width: 4,
+        backgroundColor: PRIMARY_COLOR,
+        borderRadius: 2,
+        marginHorizontal: 3,
+    },
+    fileName: {
+        fontSize: 12,
+        color: PRIMARY_COLOR,
+        marginBottom: 15,
+    },
+    progressBarBackground: {
+        width: '100%',
+        height: 4,
+        backgroundColor: '#E0F7FA',
+        borderRadius: 2,
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 15,
+    },
+    progressBarFill: {
+        width: '30%', // Пример прогресса
+        height: '100%',
+        backgroundColor: PRIMARY_COLOR,
+        borderRadius: 2,
+    },
+    progressThumb: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: PRIMARY_COLOR,
+        position: 'absolute',
+        left: '30%',
+        transform: [{ translateX: -5 }],
+    },
+    playerControls: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: 120,
+    },
+    // Accordion
+    accordionContainer: {
+        marginBottom: 15,
+        borderRadius: 8,
+        overflow: 'hidden',
+    },
+    accordionHeader: {
+        backgroundColor: PRIMARY_COLOR,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 15,
+        borderTopLeftRadius: 8,
+        borderTopRightRadius: 8,
+    },
+    accordionHeaderClosed: {
+        borderRadius: 8, // Если закрыт, скругляем и снизу
+    },
+    accordionTitle: {
+        color: '#FFF',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    accordionBody: {
+        backgroundColor: '#FFF',
+        padding: 15,
+        borderLeftWidth: 1,
+        borderRightWidth: 1,
+        borderBottomWidth: 1,
+        borderColor: PRIMARY_COLOR,
+        borderBottomLeftRadius: 8,
+        borderBottomRightRadius: 8,
+    },
+    bodyText: {
+        fontSize: 14,
+        color: '#333',
+        marginBottom: 6,
+        lineHeight: 20,
+    },
+    boldText: {
+        fontWeight: 'bold',
+    },
+    // Bottom Actions
+    actionRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 10,
+        marginBottom: 20,
+    },
+    actionButton: {
+        backgroundColor: PRIMARY_COLOR,
+        flex: 0.48,
+        paddingVertical: 12,
+        borderRadius: 6,
+        alignItems: 'center',
+    },
+    actionButtonText: {
+        color: '#FFF',
+        fontWeight: 'bold',
+        fontSize: 14,
+    },
+    createNewButton: {
+        alignItems: 'center',
+        marginBottom: 30,
+    },
+    createNewText: {
+        color: PRIMARY_COLOR,
+        fontSize: 18,
+        fontWeight: '500',
+    },
+    // FAB (Mic)
+    fabContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 10,
+    },
+    fabOuterRing: {
+        width: 110,
+        height: 110,
+        borderRadius: 55,
+        backgroundColor: 'rgba(0, 191, 255, 0.2)', // Самый светлый круг
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    fabInnerRing: {
+        width: 90,
+        height: 90,
+        borderRadius: 45,
+        backgroundColor: 'rgba(0, 191, 255, 0.5)', // Средний круг
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    fabButton: {
+        width: 70,
+        height: 70,
+        borderRadius: 35,
+        backgroundColor: PRIMARY_COLOR, // Основной круг
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+});
