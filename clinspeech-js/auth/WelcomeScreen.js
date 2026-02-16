@@ -14,7 +14,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const BRAND_CYAN = '#00CCFF';
 
-// Компонент анимированной фигуры (твоя логика анимации)
 const FloatingShape = ({ icon, index }) => {
     const moveAnim = useRef(new Animated.Value(0)).current;
 
@@ -71,7 +70,6 @@ const FloatingShape = ({ icon, index }) => {
 };
 
 export default function WelcomeScreen({ navigation }) {
-    // Твои иконки, которые мы оставили
     const shapes = [
         <FontAwesome5 name="heartbeat" size={22} color="white" />,
         <MaterialCommunityIcons name="pill" size={22} color="white" />,
@@ -94,7 +92,6 @@ export default function WelcomeScreen({ navigation }) {
                         <FloatingShape key={index} icon={shape} index={index} />
                     ))}
 
-                    {/* imageWrapper теперь без фона и теней, чтобы не мешать твоей иконке */}
                     <View style={styles.imageWrapper}>
                         <Image
                             source={require('../assets/App_icon.png')}
@@ -168,12 +165,10 @@ const styles = StyleSheet.create({
         zIndex: 10,
         justifyContent: 'center',
         alignItems: 'center',
-        // Убрали backgroundColor, borderRadius и тени
     },
     logo: {
         width: '100%',
         height: '100%',
-        // Убрали tintColor, чтобы иконка отображала свои родные цвета
     },
     shape: {
         position: 'absolute',
