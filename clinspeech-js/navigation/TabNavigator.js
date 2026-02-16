@@ -198,7 +198,7 @@ export default function TabNavigator() {
             <Tab.Screen name="Главная" component={HomeStackNavigator} />
 
             <Tab.Screen name="Архив" component={Placeholder} />
-            <Tab.Screen name="Шаблоны" component={Placeholder} />
+            <Tab.Screen name="Пациенты" component={Placeholder} />
             <Tab.Screen name="Профиль" component={Placeholder} />
         </Tab.Navigator>
     );

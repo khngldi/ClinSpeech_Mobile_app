@@ -42,42 +42,6 @@ const DATA = [
         diagnosis: 'ОРВИ',
         doctor: 'Терапевт',
     },
-    {
-        id: '4',
-        status: 'draft',
-        statusText: 'Черновик',
-        date: '27.12.2025, 12:45',
-        name: 'Султанова М. Н.',
-        diagnosis: 'Хронический гастрит',
-        doctor: 'Гастроэнтеролог',
-    },
-    {
-        id: '5',
-        status: 'ready',
-        statusText: 'Готово',
-        date: '26.12.2025, 10:10',
-        name: 'Ахметов Д. С.',
-        diagnosis: 'Артериальная гипертензия',
-        doctor: 'Кардиолог',
-    },
-    {
-        id: '6',
-        status: 'sending',
-        statusText: 'Отправка',
-        date: '25.12.2025, 16:20',
-        name: 'Омарова А. Т.',
-        diagnosis: 'Сахарный диабет 2 типа',
-        doctor: 'Эндокринолог',
-    },
-    {
-        id: '7',
-        status: 'draft',
-        statusText: 'Черновик',
-        date: '24.12.2025, 09:05',
-        name: 'Касымов Н. Б.',
-        diagnosis: 'Боль в пояснице',
-        doctor: 'Невролог',
-    },
 ];
 
 const statusColors = {
@@ -87,9 +51,18 @@ const statusColors = {
     draft: '#B0B0B0',
 };
 
-export default function ListScreen() {
+export default function ListScreen({ navigation }) {
+
     const renderItem = ({ item }) => (
-        <TouchableOpacity style={styles.card} activeOpacity={0.8}>
+        <TouchableOpacity
+            style={styles.card}
+            activeOpacity={0.8}
+            onPress={() => {
+                if (item.id === '1') {
+                    navigation.navigate('Detail');
+                }
+            }}
+        >
             <View style={styles.cardHeader}>
                 <View style={styles.statusRow}>
                     <View
@@ -131,7 +104,6 @@ export default function ListScreen() {
 
             <Text style={styles.title}>Последние записи</Text>
 
-            {/* ✅ WEB-СКРОЛЛ РЕАЛЬНО РАБОТАЕТ */}
             <View style={styles.scrollContainer}>
                 <FlatList
                     data={DATA}
@@ -157,8 +129,6 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         color: '#000',
     },
-
-    /* 🔥 КЛЮЧЕВОЙ КОНТЕЙНЕР */
     scrollContainer: {
         height:
             Platform.OS === 'web'
@@ -166,12 +136,10 @@ const styles = StyleSheet.create({
                 : '100%',
         overflowY: Platform.OS === 'web' ? 'auto' : 'visible',
     },
-
     list: {
         paddingHorizontal: 16,
         paddingBottom: TAB_HEIGHT + 20,
     },
-
     card: {
         backgroundColor: '#fff',
         borderRadius: 14,
@@ -221,7 +189,4 @@ const styles = StyleSheet.create({
         color: '#333',
         marginTop: 2,
     },
-
 });
-
-//List exampledsfsefпаыуа
