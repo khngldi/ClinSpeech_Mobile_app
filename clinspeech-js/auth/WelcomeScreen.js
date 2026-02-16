@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const BRAND_CYAN = '#00CCFF';
 
+// Компонент анимированной фигуры
 const FloatingShape = ({ icon, index }) => {
     const moveAnim = useRef(new Animated.Value(0)).current;
 
@@ -115,7 +116,7 @@ export default function WelcomeScreen({ navigation }) {
                     <TouchableOpacity
                         style={styles.regButton}
                         activeOpacity={0.8}
-                        onPress={() => navigation?.navigate('Registration')}
+                        onPress={() => navigation.navigate('Register')}
                     >
                         <Text style={styles.buttonText}>РЕГИСТРАЦИЯ</Text>
                     </TouchableOpacity>
@@ -123,7 +124,7 @@ export default function WelcomeScreen({ navigation }) {
                     <TouchableOpacity
                         style={styles.loginButton}
                         activeOpacity={0.8}
-                        onPress={() => navigation?.navigate('Login')}
+                        onPress={() => navigation.navigate('Login')} // Ссылка на экран входа
                     >
                         <Text style={styles.buttonText}>ВХОД</Text>
                     </TouchableOpacity>
