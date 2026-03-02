@@ -5,7 +5,6 @@ import {
     TouchableOpacity,
     Animated,
     Easing,
-    Platform,
     Image,
     LogBox,
     StyleSheet,
@@ -35,25 +34,15 @@ export default function RecordPage({ navigation }) {
 
     const recordingRef = useRef(null);
 
-    const audioCtxRef = useRef(null);
-    const analyserRef = useRef(null);
-    const rafRef = useRef(null);
-
-    const SENSITIVITY = Platform.OS === 'web' ? 40 : 1;
+    const SENSITIVITY = 1;
 
     useEffect(() => {
         startWaves();
-
-        if (Platform.OS === 'web') {
-            startWebMic();
-        } else {
-            startMobileMic();
-        }
+        startMobileMic();
 
         return () => {
             stopWaves();
             stopMobileMic();
-            stopWebMic();
         };
     }, []);
 
@@ -155,42 +144,6 @@ export default function RecordPage({ navigation }) {
             await recordingRef.current.stopAndUnloadAsync();
             recordingRef.current = null;
         }
-    };
-
-    const startWebMic = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const analyser = ctx.createAnalyser();
-            analyser.fftSize = 512;
-            const data = new Uint8Array(analyser.frequencyBinCount);
-            const src = ctx.createMediaStreamSource(stream);
-            src.connect(analyser);
-
-            audioCtxRef.current = ctx;
-            analyserRef.current = analyser;
-
-            const tick = () => {
-                analyser.getByteTimeDomainData(data);
-                let sum = 0;
-                for (let i = 0; i < data.length; i++) {
-                    const v = (data[i] - 128) / 128;
-                    sum += v * v;
-                }
-                const rms = Math.sqrt(sum / data.length);
-                micLevel.current = Math.min(1, rms * SENSITIVITY);
-                micAnimated.setValue(micLevel.current);
-                rafRef.current = requestAnimationFrame(tick);
-            };
-            tick();
-        } catch (e) {
-            console.log('Web mic error', e);
-        }
-    };
-
-    const stopWebMic = () => {
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        if (audioCtxRef.current) audioCtxRef.current.close();
     };
 
     return (

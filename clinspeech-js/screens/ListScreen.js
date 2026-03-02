@@ -5,14 +5,11 @@ import {
     StyleSheet,
     FlatList,
     TouchableOpacity,
-    Platform,
-    Dimensions
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
 const TAB_HEIGHT = 65;
-const { height: WINDOW_HEIGHT } = Dimensions.get('window');
 
 const DATA = [
     {
@@ -130,11 +127,7 @@ const styles = StyleSheet.create({
         color: '#000',
     },
     scrollContainer: {
-        height:
-            Platform.OS === 'web'
-                ? WINDOW_HEIGHT - TAB_HEIGHT - 120
-                : '100%',
-        overflowY: Platform.OS === 'web' ? 'auto' : 'visible',
+        flex: 1,
     },
     list: {
         paddingHorizontal: 16,

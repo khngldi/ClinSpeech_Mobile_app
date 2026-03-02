@@ -12,6 +12,7 @@ import ConfirmScreen from "./screens/ConfirmScreen";
 import DetailScreen from './screens/DetailScreen';
 import RegisterScreen from './auth/RegisterScreen';
 import LoginScreen from "./auth/LoginScreen";
+import PasswordForgotScreen from "./auth/PasswordForgotScreen";
 
 const Stack = createStackNavigator();
 
@@ -28,7 +29,7 @@ export default function App() {
                     <Stack.Screen name="Login" component={LoginScreen} />
                     <Stack.Screen name="Register" component={RegisterScreen} />
                     <Stack.Screen name="Welcome" component={WelcomeScreen} />
-
+                    <Stack.Screen name="PasswordForgot" component={PasswordForgotScreen} />
                     <Stack.Screen name="MainTabs" component={TabNavigator} />
                     <Stack.Screen name="Settings" component={SettingsScreen} />
                     <Stack.Screen name="RecordPage" component={RecordPage} options={{ animation: 'fade' }}/>

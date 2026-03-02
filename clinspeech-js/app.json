@@ -2,6 +2,7 @@
   "expo": {
     "name": "clinspeech-js",
     "slug": "clinspeech-js",
+    "platforms": ["ios", "android"],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -21,9 +22,6 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true
-    },
-    "web": {
-      "favicon": "./assets/Web-icon.png"
     },
     "plugins": [
       "@react-native-community/datetimepicker"

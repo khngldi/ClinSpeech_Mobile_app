@@ -1,105 +1,174 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
     StyleSheet,
-    Image,
+    TextInput,
     TouchableOpacity,
+    ActivityIndicator,
     Dimensions,
+    Image,
+    SafeAreaView,
+    KeyboardAvoidingView,
     Platform,
-    ImageBackground,
-    SafeAreaView
+    ScrollView,
+    Alert
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const BRAND_CYAN = '#00CCFF';
-
-const isWeb = Platform.OS === 'web';
-const isLargeScreen = SCREEN_WIDTH > 600;
+const { width } = Dimensions.get('window');
+const BRAND_CYAN = '#00C0E8';
 
 export default function LoginScreen({ navigation }) {
+
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleLogin = async () => {
+        if (isLoading) return;
+
+        setIsLoading(true);
+        setError(false);
+        setErrorMessage('');
+
+        // Имитируем login (заменить на реальный API позже)
+        setTimeout(() => {
+            setIsLoading(false);
+
+            if (email === 'user@example.com' && password === '123456') {
+                Alert.alert('Успешно!', 'Вы вошли в систему');
+                navigation.replace('Main'); // или другой экран
+            } else {
+                setError(true);
+                setErrorMessage('Неверный логин или пароль.');
+            }
+        }, 1500);
+    };
+
     return (
-        <View style={styles.container}>
-            {/* ВЕРХНЯЯ ЧАСТЬ */}
-            <View style={styles.headerContainer}>
-                <ImageBackground
-                    source={require('../assets/Ellipse 4.png')}
-                    style={styles.headerBackground}
-                    resizeMode="stretch"
+        <LinearGradient
+            colors={['#AFF1FF', '#00C0E8']}
+            style={styles.gradientContainer}
+        >
+            <SafeAreaView style={{ flex: 1 }}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                    style={{ flex: 1 }}
                 >
-                    <SafeAreaView style={styles.safeArea}>
+                    <ScrollView
+                        contentContainerStyle={styles.container}
+                        keyboardShouldPersistTaps="handled"
+                    >
+
+                        {/* LOGO */}
                         <View style={styles.logoWrapper}>
                             <Image
                                 source={require('../assets/App_logo.png')}
-                                style={styles.miniLogo}
+                                style={styles.logo}
                                 resizeMode="contain"
                             />
-                            <Text style={styles.headerTitle}>ClinSpeech</Text>
+                            <Text style={styles.appTitle}>ClinSpeech</Text>
                         </View>
-                    </SafeAreaView>
-                </ImageBackground>
-            </View>
 
-        </View>
+                        {/* CARD */}
+                        <View style={styles.card}>
+                            <Text style={styles.title}>Вход</Text>
+                            <Text style={styles.subtitle}>
+                                Введите ваши учётные данные
+                            </Text>
+
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Логин или email"
+                                placeholderTextColor="#999"
+                                value={email}
+                                onChangeText={setEmail}
+                                editable={!isLoading}
+                            />
+
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Пароль"
+                                placeholderTextColor="#999"
+                                secureTextEntry
+                                value={password}
+                                onChangeText={setPassword}
+                                editable={!isLoading}
+                            />
+
+                            {error && (
+                                <Text style={styles.errorText}>
+                                    {errorMessage}
+                                </Text>
+                            )}
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.button,
+                                    isLoading && { opacity: 0.6 }
+                                ]}
+                                onPress={handleLogin}
+                                disabled={isLoading}
+                            >
+                                {isLoading ? (
+                                    <ActivityIndicator color="#FFF" />
+                                ) : (
+                                    <Text style={styles.buttonText}>ВОЙТИ</Text>
+                                )}
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('PasswordForgot')}
+                            >
+                                <Text style={styles.link}>
+                                    Я не могу вспомнить свой пароль
+                                </Text>
+                            </TouchableOpacity>
+
+                            <View style={styles.dividerContainer}>
+                                <View style={styles.divider} />
+                                <Text style={styles.dividerText}>или</Text>
+                                <View style={styles.divider} />
+                            </View>
+
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('Register')}
+                            >
+                                <Text style={styles.registerText}>
+                                    Нет аккаунта?{' '}
+                                    <Text style={{ color: BRAND_CYAN }}>
+                                        Зарегистрироваться
+                                    </Text>
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+
+                    </ScrollView>
+                </KeyboardAvoidingView>
+            </SafeAreaView>
+        </LinearGradient>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#FFF',
-    },
-    headerContainer: {
-        width: '100%',
-        height: isWeb ? 180 : SCREEN_HEIGHT * 0.22,
-        minHeight: 150,
-    },
-    headerBackground: {
-        width: '100%',
-        height: '100%',
-    },
-    safeArea: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    logoWrapper: {
-        alignItems: 'center',
-        paddingTop: isWeb ? 0 : 20,
-    },
-    miniLogo: {
-        width: isWeb ? 50 : 40,
-        height: isWeb ? 50 : 40,
-        marginBottom: 5,
-    },
-    headerTitle: {
-        fontSize: isWeb ? 28 : 26,
-        fontWeight: 'bold',
-        color: '#FFF',
-        letterSpacing: 1,
-    },
-    content: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'space-between', // Распределяет элементы по всей высоте
-        paddingVertical: isWeb ? 20 : 30, // Больше отступов на мобилках
-    },
-    topSection: {
-        alignItems: 'center',
-    },
-    selectionTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    mainIllustration: {
-        width: '100%',
-        height: '90%', // Оставляем запас
-    },
-    buttonContainer: {
-        width: '85%',
-        maxWidth: 400,
-        gap: 15,
-        marginBottom: isWeb ? 20 : 40, // На мобилках поднимаем кнопки повыше от края
-    },
+    gradientContainer: { flex: 1 },
+    container: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+    logoWrapper: { alignItems: 'center', marginBottom: 40 },
+    logo: { width: 60, height: 60 },
+    appTitle: { fontSize: 28, fontWeight: 'bold', color: '#FFF', marginTop: 10 },
+    card: { width: '100%', maxWidth: 400, backgroundColor: '#FFF', borderRadius: 20, padding: 25, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10, elevation: 5 },
+    title: { fontSize: 24, fontWeight: 'bold', marginBottom: 5, color: '#1F2937' },
+    subtitle: { color: '#666', marginBottom: 20 },
+    input: { borderWidth: 1, borderColor: '#DDD', borderRadius: 12, padding: 14, marginBottom: 15, fontSize: 16 },
+    button: { backgroundColor: BRAND_CYAN, padding: 15, borderRadius: 12, alignItems: 'center', marginTop: 10 },
+    buttonText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+    errorText: { color: 'red', marginBottom: 10 },
+    link: { color: BRAND_CYAN, textAlign: 'center', marginTop: 15 },
+    dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 20 },
+    divider: { flex: 1, height: 1, backgroundColor: '#DDD' },
+    dividerText: { marginHorizontal: 10, color: '#999' },
+    registerText: { textAlign: 'center', color: '#666' }
 });

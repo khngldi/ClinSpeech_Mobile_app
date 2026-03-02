@@ -7,10 +7,10 @@ import {
     TouchableOpacity,
     Animated,
     Easing,
-    Platform
 } from 'react-native';
 import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+
 
 const BRAND_CYAN = '#00CCFF';
 
@@ -27,7 +27,7 @@ const FloatingShape = ({ icon, index }) => {
                     toValue: 1,
                     duration: 4500,
                     easing: Easing.out(Easing.quad),
-                    useNativeDriver: Platform.OS !== 'web',
+                    useNativeDriver: true,
                 }),
             ]).start(() => startLoop());
         };

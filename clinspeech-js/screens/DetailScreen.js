@@ -6,7 +6,6 @@ import {
     ScrollView,
     TouchableOpacity,
     SafeAreaView,
-    Platform,
     Dimensions
 } from 'react-native';
 import { Ionicons, MaterialIcons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -44,10 +43,8 @@ export default function DetailScreen({ navigation }) {
             <SafeAreaView style={styles.safeArea}>
                 <ScrollView
                     style={styles.scrollView}
-                    // Это КЛЮЧЕВОЙ параметр для фикса скролла в вебе
                     contentContainerStyle={styles.scrollContent}
                     showsVerticalScrollIndicator={true}
-                    // Добавляем для уверенности в Web
                     scrollEnabled={true}
                 >
                     {/* --- HEADER --- */}
@@ -168,23 +165,20 @@ export default function DetailScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    // Новый оберточный контейнер для Web
     mainWrapper: {
         flex: 1,
-        height: Platform.OS === 'web' ? '100vh' : '100%',
+        height: '100%',
         backgroundColor: '#FFFFFF',
     },
     safeArea: {
         flex: 1,
         backgroundColor: '#FFFFFF',
-        // Убираем высоту отсюда, переносим в wrapper
     },
     scrollView: {
         flex: 1,
         width: '100%',
     },
     scrollContent: {
-        // Ключевой параметр для Web
         flexGrow: 1,
         paddingHorizontal: 20,
         paddingBottom: 60,
@@ -193,7 +187,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingTop: Platform.OS === 'web' ? 20 : 10,
+        paddingTop: 10,
         marginBottom: 20,
     },
     headerTitle: {
