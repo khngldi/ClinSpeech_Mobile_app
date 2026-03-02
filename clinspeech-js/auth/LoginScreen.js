@@ -15,6 +15,8 @@ import {
     Alert
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL, safeJson } from '../api';
 
 const { width } = Dimensions.get('window');
 const BRAND_CYAN = '#00C0E8';
@@ -34,18 +36,30 @@ export default function LoginScreen({ navigation }) {
         setError(false);
         setErrorMessage('');
 
-        // Имитируем login (заменить на реальный API позже)
-        setTimeout(() => {
-            setIsLoading(false);
+        try {
+            const response = await fetch(`${BASE_URL}/auth/login/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: email, password }),
+            });
 
-            if (email === 'user@example.com' && password === '123456') {
-                Alert.alert('Успешно!', 'Вы вошли в систему');
-                navigation.replace('Main'); // или другой экран
-            } else {
-                setError(true);
-                setErrorMessage('Неверный логин или пароль.');
+            const data = await safeJson(response);
+
+            if (!response.ok) {
+                throw new Error(data.detail || 'Неверный логин или пароль.');
             }
-        }, 1500);
+
+            // Сохраняем токены
+            await AsyncStorage.setItem('access_token', data.access);
+            await AsyncStorage.setItem('refresh_token', data.refresh);
+
+            navigation.replace('MainTabs');
+        } catch (err) {
+            setError(true);
+            setErrorMessage(err.message || 'Ошибка подключения к серверу.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (

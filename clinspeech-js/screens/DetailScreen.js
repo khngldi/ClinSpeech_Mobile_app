@@ -35,7 +35,19 @@ const Accordion = ({ title, children, isOpenDefault = false }) => {
     );
 };
 
-export default function DetailScreen({ navigation }) {
+export default function DetailScreen({ navigation, route }) {
+    const consultation = route?.params?.consultation || {};
+    const patient = consultation.patient_info || {};
+    const patientName = patient.last_name
+        ? `${patient.last_name} ${patient.first_name || ''} ${patient.middle_name || ''}`
+        : 'Пациент не указан';
+    const statusLabel = { pending: 'Ожидание', processing: 'Обработка', done: 'Готово', error: 'Ошибка' };
+    const statusColor = { pending: '#B0B0B0', processing: '#F1C40F', done: '#32CD32', error: '#E74C3C' };
+    const status = consultation.status || 'done';
+    const formattedDate = consultation.created_at
+        ? new Date(consultation.created_at).toLocaleString('ru-RU')
+        : '—';
+    const report = consultation.final_report || consultation.generated_report || '';
     const waveHeights = [10, 20, 15, 30, 40, 25, 50, 70, 45, 80, 50, 90, 60, 40, 75, 50, 30, 45, 20, 15, 10];
 
     return (
@@ -52,7 +64,7 @@ export default function DetailScreen({ navigation }) {
                         <TouchableOpacity onPress={() => navigation?.goBack()}>
                             <Ionicons name="chevron-back" size={28} color="#000" />
                         </TouchableOpacity>
-                        <Text style={styles.headerTitle} numberOfLines={1}>Чета там чета там</Text>
+                        <Text style={styles.headerTitle} numberOfLines={1}>{patientName}</Text>
                         <View style={styles.headerIcons}>
                             <TouchableOpacity style={styles.iconButton}>
                                 <Ionicons name="star-outline" size={24} color="#FFD700" />
@@ -66,8 +78,8 @@ export default function DetailScreen({ navigation }) {
                     {/* --- STATUS & PLAYER --- */}
                     <View style={styles.playerSection}>
                         <View style={styles.statusRow}>
-                            <View style={styles.statusDot} />
-                            <Text style={styles.statusText}>Готово</Text>
+                            <View style={[styles.statusDot, { backgroundColor: statusColor[status] || '#32CD32' }]} />
+                            <Text style={[styles.statusText, { color: statusColor[status] || '#32CD32' }]}>{statusLabel[status] || status}</Text>
                         </View>
 
                         <Text style={styles.timeText}>10:15:25</Text>
@@ -78,7 +90,7 @@ export default function DetailScreen({ navigation }) {
                             ))}
                         </View>
 
-                        <Text style={styles.fileName}>consult_16-10-2024_12-30.mp3</Text>
+                        <Text style={styles.fileName}>Консультация #{consultation.id || '—'} • {formattedDate}</Text>
 
                         <View style={styles.progressBarBackground}>
                             <View style={styles.progressBarFill} />
@@ -100,39 +112,22 @@ export default function DetailScreen({ navigation }) {
 
                     {/* --- ACCORDIONS --- */}
                     <Accordion title="Общие данные" isOpenDefault={true}>
-                        <Text style={styles.bodyText}>ФИО: Чето там чета там чета таааам</Text>
-                        <Text style={styles.bodyText}>ИИН: 130311504603</Text>
-                        <Text style={styles.bodyText}>Возраст: ** лет</Text>
-                        <Text style={styles.bodyText}>Дата: 19.11.2024 (Время: 09:56)</Text>
-                        <Text style={styles.bodyText}>Врач: Семейный врач (Врач общей практики) – организация ТОО "блаблабла"</Text>
+                        <Text style={styles.bodyText}>ФИО: {patientName}</Text>
+                        <Text style={styles.bodyText}>ИИН: {patient.iin || '—'}</Text>
+                        <Text style={styles.bodyText}>Дата: {formattedDate}</Text>
+                        <Text style={styles.bodyText}>Врач: {consultation.doctor_name || '—'}</Text>
                     </Accordion>
 
-                    <Accordion title="Юридическая информация">
-                        <Text style={styles.bodyText}>Организация: ТОО "блаблабла"</Text>
-                        <Text style={styles.bodyText}>БСН (БИН): 2526262682682</Text>
-                        <Text style={styles.bodyText}>Форма: №052/у (Утв. приказом МЗ РК № ҚР ДСМ-175/2020 от 30.10.2020)</Text>
-                    </Accordion>
-
-                    <Accordion title="Клиническая картина">
-                        <Text style={styles.bodyText}><Text style={styles.boldText}>ЖАЛОБЫ ПАЦИЕНТА:</Text>{'\n'}На жжение и/или болезненное мочеиспускание (дизурия), частые настоятельные позывы...</Text>
+                    <Accordion title="Транскрипция">
+                        <Text style={styles.bodyText}>{consultation.raw_transcription || 'Нет данных'}</Text>
                     </Accordion>
 
                     <Accordion title="Диагноз (МКБ-10)">
-                        <Text style={styles.bodyText}>Диагноз: Острый цистит</Text>
+                        <Text style={styles.bodyText}>Код: {consultation.diagnosis_code || '—'}</Text>
                     </Accordion>
 
-                    <Accordion title="Лечение и назначение">
-                        <Text style={styles.bodyText}>1. АНТИБАКТЕРИАЛЬНАЯ ТЕРАПИЯ (Основная):</Text>
-                        <Text style={styles.bodyText}>• Цефтриаксон: по 1.0 мл х 1 раз в день...</Text>
-                    </Accordion>
-
-                    <Accordion title="Рекомендации и физиолечение">
-                        <Text style={styles.bodyText}>• Физиолечение показано.</Text>
-                        <Text style={styles.bodyText}>• Обильное питье, соблюдение диеты.</Text>
-                    </Accordion>
-
-                    <Accordion title="Подпись">
-                        <Text style={styles.bodyText}>Врач: Шахмуханбетов Ханкелді Ерболулы</Text>
+                    <Accordion title="Отчёт">
+                        <Text style={styles.bodyText}>{report || (status === 'processing' ? 'Отчёт генерируется...' : 'Нет данных')}</Text>
                     </Accordion>
 
                     {/* --- BOTTOM ACTIONS --- */}
