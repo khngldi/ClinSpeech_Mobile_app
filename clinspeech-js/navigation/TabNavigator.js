@@ -2,11 +2,16 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, Image, TouchableOpacity, Alert, StyleSheet, Animated } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import { getFocusedRouteNameFromRoute } from '@react-navigation/native'; // Импорт для проверки текущего экрана
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import HomeScreen from '../screens/HomeScreen';
-import ListScreen from '../screens/ListScreen'; // Импортируем новый экран
+import ListScreen from '../screens/ListScreen';
+import DashboardScreen from '../screens/DashboardScreen';
+import PatientsScreen from '../screens/PatientsScreen';
+import ArchiveScreen from '../screens/ArchiveScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import SettingsScreen from '../screens/Settings';
 import { tabStyles } from '../styles/TabStyles';
 
 const Tab = createBottomTabNavigator();
@@ -17,15 +22,10 @@ function HomeStackNavigator() {
         <HomeStack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
             <HomeStack.Screen name="HomeRecord" component={HomeScreen} />
             <HomeStack.Screen name="HomeList" component={ListScreen} />
+            <HomeStack.Screen name="HomeDashboard" component={DashboardScreen} />
         </HomeStack.Navigator>
     );
 }
-
-const Placeholder = ({ name }) => (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
-        <Text style={{ fontSize: 18, color: '#005864' }}>Экран {name} в разработке</Text>
-    </View>
-);
 
 function CustomTabBar({ state, navigation }) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -40,6 +40,7 @@ function CustomTabBar({ state, navigation }) {
     if (isMainTabFocused) {
         if (focusedRouteName === 'HomeRecord') activeSubOption = 'Записать';
         else if (focusedRouteName === 'HomeList') activeSubOption = 'Список';
+        else if (focusedRouteName === 'HomeDashboard') activeSubOption = 'Дэшборд';
     }
 
     const toggleMenu = (shouldOpen) => {
@@ -69,6 +70,8 @@ function CustomTabBar({ state, navigation }) {
             navigation.navigate('Главная', { screen: 'HomeRecord' });
         } else if (action === 'Список') {
             navigation.navigate('Главная', { screen: 'HomeList' });
+        } else if (action === 'Дэшборд') {
+            navigation.navigate('Главная', { screen: 'HomeDashboard' });
         } else {
             Alert.alert(`Раздел ${action}`, "Этот экран в разработке");
         }
@@ -88,7 +91,7 @@ function CustomTabBar({ state, navigation }) {
 
     return (
         <View style={tabStyles.tabBarWrapper}>
-            {/* Оверлей (закрывает меню при клике вне кнопок) */}
+            {/* Оверлей */}
             {isMenuOpen && (
                 <Animated.View style={[tabStyles.overlay, { opacity: animation }]}>
                     <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => toggleMenu(false)} />
@@ -102,7 +105,6 @@ function CustomTabBar({ state, navigation }) {
                         colors={['#29D8FF', '#0088A4']}
                         style={tabStyles.gradientBackground}
                     >
-                        {/* Кнопка Записать */}
                         <TouchableOpacity
                             style={[
                                 tabStyles.subMenuItem,
@@ -114,7 +116,6 @@ function CustomTabBar({ state, navigation }) {
                             <Text style={tabStyles.subMenuText}>Записать</Text>
                         </TouchableOpacity>
 
-                        {/* Кнопка Список */}
                         <TouchableOpacity
                             style={[
                                 tabStyles.subMenuItem,
@@ -126,16 +127,15 @@ function CustomTabBar({ state, navigation }) {
                             <Text style={tabStyles.subMenuText}>Список</Text>
                         </TouchableOpacity>
 
-                        {/* Кнопка Избранные */}
                         <TouchableOpacity
                             style={[
                                 tabStyles.subMenuItem,
-                                (activeSubOption === 'Избранные') && tabStyles.activeBackground
+                                (activeSubOption === 'Дэшборд') && tabStyles.activeBackground
                             ]}
-                            onPress={() => handleSubMenuPress('Избранные')}
+                            onPress={() => handleSubMenuPress('Дэшборд')}
                         >
                             <Image source={require('../assets/favorites.png')} style={tabStyles.subMenuIcon} />
-                            <Text style={tabStyles.subMenuText}>Избранные</Text>
+                            <Text style={tabStyles.subMenuText}>Дэшборд</Text>
                         </TouchableOpacity>
                     </LinearGradient>
                 </Animated.View>
@@ -156,9 +156,10 @@ function CustomTabBar({ state, navigation }) {
 
                         let imageSource;
                         if (route.name === 'Главная') imageSource = require('../assets/home.png');
-                        else if (route.name === 'Архив') imageSource = require('../assets/archive.png');
                         else if (route.name === 'Пациенты') imageSource = require('../assets/template.png');
+                        else if (route.name === 'Архив') imageSource = require('../assets/archive.png');
                         else if (route.name === 'Профиль') imageSource = require('../assets/profile.png');
+                        else if (route.name === 'Настройки') imageSource = require('../assets/settings.png');
 
                         return (
                             <TouchableOpacity
@@ -167,8 +168,6 @@ function CustomTabBar({ state, navigation }) {
                                 activeOpacity={1}
                                 onPress={() => {
                                     if (isMainButton) {
-                                        // Если нажали Главную - просто открываем/закрываем меню
-                                        // Не переходим никуда, остаемся на текущем под-экране (Список или Запись)
                                         toggleMenu(!isMenuOpen);
                                     } else {
                                         toggleMenu(false);
@@ -196,10 +195,10 @@ export default function TabNavigator() {
             screenOptions={{ headerShown: false, animation: 'fade' }}
         >
             <Tab.Screen name="Главная" component={HomeStackNavigator} />
-
-            <Tab.Screen name="Архив" component={Placeholder} />
-            <Tab.Screen name="Пациенты" component={Placeholder} />
-            <Tab.Screen name="Профиль" component={Placeholder} />
+            <Tab.Screen name="Пациенты" component={PatientsScreen} />
+            <Tab.Screen name="Архив" component={ArchiveScreen} />
+            <Tab.Screen name="Профиль" component={ProfileScreen} />
+            <Tab.Screen name="Настройки" component={SettingsScreen} />
         </Tab.Navigator>
     );
 }

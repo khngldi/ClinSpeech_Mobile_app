@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { apiFetch, safeJson } from '../api';
@@ -7,7 +7,6 @@ import { apiFetch, safeJson } from '../api';
 import { homeStyles as styles } from '../styles/HomeStyles';
 
 export default function HomeScreen({ navigation }) {
-    const [language, setLanguage] = useState('RUS');
     const [doctorName, setDoctorName] = useState('');
 
     useEffect(() => {
@@ -28,32 +27,6 @@ export default function HomeScreen({ navigation }) {
             style={styles.container}
         >
             <SafeAreaView style={styles.safeArea}>
-
-                <View style={styles.header}>
-                    {/* Переход в настройки */}
-                    <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
-                        <Image
-                            source={require('../assets/settings.png')}
-                            style={styles.settingsIcon}
-                        />
-                    </TouchableOpacity>
-
-                    <View style={styles.langSwitch}>
-                        <TouchableOpacity
-                            style={[styles.langButton, language === 'RUS' && styles.activeLangButton]}
-                            onPress={() => setLanguage('RUS')}
-                        >
-                            <Text style={[styles.langText, language === 'RUS' && styles.activeLangText]}>RUS</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.langButton, language === 'KZ' && styles.activeLangButton]}
-                            onPress={() => setLanguage('KZ')}
-                        >
-                            <Text style={[styles.langText, language === 'KZ' && styles.activeLangText]}>KZ</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
 
                 <View style={styles.content}>
                     <Text style={styles.title}>Добро пожаловать,{'\n'}{doctorName ? `Др. ${doctorName}!` : 'Доктор!'}</Text>

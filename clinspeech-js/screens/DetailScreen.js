@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
+    TextInput,
     StyleSheet,
     ScrollView,
     TouchableOpacity,
     SafeAreaView,
-    Dimensions
+    Dimensions,
+    ActivityIndicator,
+    Alert
 } from 'react-native';
 import { Ionicons, MaterialIcons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
+import { apiFetch, safeJson } from '../api';
 
 const PRIMARY_COLOR = '#00BFFF';
 const { height: windowHeight } = Dimensions.get('window');
@@ -36,19 +40,122 @@ const Accordion = ({ title, children, isOpenDefault = false }) => {
 };
 
 export default function DetailScreen({ navigation, route }) {
-    const consultation = route?.params?.consultation || {};
-    const patient = consultation.patient_info || {};
+    const statusLabel = { created: 'Создано', processing: 'Обработка', generating: 'Генерация', ready: 'Готово', error: 'Ошибка' };
+    const statusColor = { created: '#B0B0B0', processing: '#F1C40F', generating: '#F39C12', ready: '#32CD32', error: '#E74C3C' };
+    const waveHeights = [10, 20, 15, 30, 40, 25, 50, 70, 45, 80, 50, 90, 60, 40, 75, 50, 30, 45, 20, 15, 10];
+
+    const consultationId = route?.params?.consultation?.id;
+    const [data, setData] = useState(route?.params?.consultation || null);
+    const [loading, setLoading] = useState(true);
+    const [editing, setEditing] = useState(false);
+    const [editForm, setEditForm] = useState({});
+
+    const load = useCallback(async () => {
+        if (!consultationId) { setLoading(false); return; }
+        try {
+            const res = await apiFetch(`/consultations/${consultationId}/`);
+            const json = await safeJson(res);
+            if (res.ok) setData(json);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    }, [consultationId]);
+
+    useEffect(() => { load(); }, [load]);
+
+    useEffect(() => {
+        if (data?.final_report) {
+            try { setEditForm(JSON.parse(data.final_report)); } catch {}
+        }
+    }, [data?.final_report]);
+
+    // Polling while processing/generating
+    useEffect(() => {
+        if (!data || !['processing', 'generating'].includes(data.status)) return;
+        const interval = setInterval(async () => {
+            try {
+                const res = await apiFetch(`/consultations/${consultationId}/`);
+                const json = await safeJson(res);
+                if (res.ok) {
+                    setData(json);
+                    if (!['processing', 'generating'].includes(json.status)) clearInterval(interval);
+                }
+            } catch {}
+        }, 3000);
+        return () => clearInterval(interval);
+    }, [data?.status, consultationId]);
+
+    const handleStartProcessing = async () => {
+        try {
+            const res = await apiFetch(`/consultations/${consultationId}/start_processing/`, { method: 'POST' });
+            const json = await safeJson(res);
+            if (!res.ok) { Alert.alert('Ошибка', json.error || 'Ошибка запуска'); return; }
+            await load();
+        } catch (err) { Alert.alert('Ошибка', 'Ошибка запуска обработки'); }
+    };
+
+    const handleRegenerate = async () => {
+        Alert.alert('Перегенерация', 'Перегенерировать отчёт? Текущий будет сохранён в истории.', [
+            { text: 'Отмена', style: 'cancel' },
+            { text: 'Да', onPress: async () => {
+                try {
+                    await apiFetch(`/consultations/${consultationId}/regenerate/`, { method: 'POST' });
+                    await load();
+                } catch { Alert.alert('Ошибка', 'Ошибка перегенерации'); }
+            }},
+        ]);
+    };
+
+    const handleSaveReport = async () => {
+        try {
+            const res = await apiFetch(`/consultations/${consultationId}/edit_report/`, {
+                method: 'POST',
+                body: JSON.stringify(editForm),
+            });
+            if (!res.ok) { Alert.alert('Ошибка', 'Ошибка сохранения'); return; }
+            await load();
+            setEditing(false);
+        } catch { Alert.alert('Ошибка', 'Ошибка сохранения'); }
+    };
+
+    const handleDownloadPDF = async () => {
+        try {
+            const res = await apiFetch(`/consultations/${consultationId}/download_pdf/`);
+            if (!res.ok) { Alert.alert('Ошибка', 'Ошибка скачивания PDF'); return; }
+            Alert.alert('PDF', 'PDF-отчёт готов к скачиванию');
+        } catch { Alert.alert('Ошибка', 'Ошибка скачивания PDF'); }
+    };
+
+    if (loading) {
+        return (
+            <View style={[styles.mainWrapper, { justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+            </View>
+        );
+    }
+
+    if (!data) {
+        return (
+            <View style={[styles.mainWrapper, { justifyContent: 'center', alignItems: 'center' }]}>
+                <Text style={{ fontSize: 16, color: '#999' }}>Консультация не найдена</Text>
+            </View>
+        );
+    }
+
+    const patient = data.patient_info || {};
     const patientName = patient.last_name
         ? `${patient.last_name} ${patient.first_name || ''} ${patient.middle_name || ''}`
         : 'Пациент не указан';
-    const statusLabel = { pending: 'Ожидание', processing: 'Обработка', done: 'Готово', error: 'Ошибка' };
-    const statusColor = { pending: '#B0B0B0', processing: '#F1C40F', done: '#32CD32', error: '#E74C3C' };
-    const status = consultation.status || 'done';
-    const formattedDate = consultation.created_at
-        ? new Date(consultation.created_at).toLocaleString('ru-RU')
+    const status = data.status || 'ready';
+    const formattedDate = data.created_at
+        ? new Date(data.created_at).toLocaleString('ru-RU')
         : '—';
-    const report = consultation.final_report || consultation.generated_report || '';
-    const waveHeights = [10, 20, 15, 30, 40, 25, 50, 70, 45, 80, 50, 90, 60, 40, 75, 50, 30, 45, 20, 15, 10];
+    const isProcessing = ['processing', 'generating'].includes(status);
+
+    let report = {};
+    try { report = JSON.parse(data.final_report || '{}'); } catch {}
 
     return (
         <View style={styles.mainWrapper}>
@@ -66,12 +173,11 @@ export default function DetailScreen({ navigation, route }) {
                         </TouchableOpacity>
                         <Text style={styles.headerTitle} numberOfLines={1}>{patientName}</Text>
                         <View style={styles.headerIcons}>
-                            <TouchableOpacity style={styles.iconButton}>
-                                <Ionicons name="star-outline" size={24} color="#FFD700" />
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.iconButton}>
-                                <Ionicons name="trash-outline" size={24} color="#FF4D4D" />
-                            </TouchableOpacity>
+                            {status === 'ready' && (
+                                <TouchableOpacity style={styles.iconButton} onPress={() => setEditing(!editing)}>
+                                    <Ionicons name={editing ? "close-outline" : "create-outline"} size={24} color={PRIMARY_COLOR} />
+                                </TouchableOpacity>
+                            )}
                         </View>
                     </View>
 
@@ -81,77 +187,108 @@ export default function DetailScreen({ navigation, route }) {
                             <View style={[styles.statusDot, { backgroundColor: statusColor[status] || '#32CD32' }]} />
                             <Text style={[styles.statusText, { color: statusColor[status] || '#32CD32' }]}>{statusLabel[status] || status}</Text>
                         </View>
-
-                        <Text style={styles.timeText}>10:15:25</Text>
-
-                        <View style={styles.waveContainer}>
-                            {waveHeights.map((h, i) => (
-                                <View key={i} style={[styles.waveBar, { height: h }]} />
-                            ))}
-                        </View>
-
-                        <Text style={styles.fileName}>Консультация #{consultation.id || '—'} • {formattedDate}</Text>
-
-                        <View style={styles.progressBarBackground}>
-                            <View style={styles.progressBarFill} />
-                            <View style={styles.progressThumb} />
-                        </View>
-
-                        <View style={styles.playerControls}>
-                            <TouchableOpacity>
-                                <Ionicons name="play-skip-back" size={24} color={PRIMARY_COLOR} />
-                            </TouchableOpacity>
-                            <TouchableOpacity>
-                                <Ionicons name="play-circle" size={40} color={PRIMARY_COLOR} />
-                            </TouchableOpacity>
-                            <TouchableOpacity>
-                                <Ionicons name="play-skip-forward" size={24} color={PRIMARY_COLOR} />
-                            </TouchableOpacity>
-                        </View>
                     </View>
+
+                    {/* --- PROCESSING INDICATOR --- */}
+                    {isProcessing && (
+                        <View style={styles.processingCard}>
+                            <ActivityIndicator size="large" color={PRIMARY_COLOR} style={{ marginBottom: 12 }} />
+                            <Text style={styles.processingTitle}>
+                                {status === 'processing' ? 'Транскрибация аудио...' : 'Генерация ИИ-отчёта...'}
+                            </Text>
+                            <Text style={styles.processingSubtitle}>Пожалуйста, подождите. Обновление происходит автоматически.</Text>
+                        </View>
+                    )}
 
                     {/* --- ACCORDIONS --- */}
                     <Accordion title="Общие данные" isOpenDefault={true}>
                         <Text style={styles.bodyText}>ФИО: {patientName}</Text>
                         <Text style={styles.bodyText}>ИИН: {patient.iin || '—'}</Text>
                         <Text style={styles.bodyText}>Дата: {formattedDate}</Text>
-                        <Text style={styles.bodyText}>Врач: {consultation.doctor_name || '—'}</Text>
+                        <Text style={styles.bodyText}>Врач: {data.doctor_name || '—'}</Text>
+                        <Text style={styles.bodyText}>Снимков: {data.images_count || 0}</Text>
                     </Accordion>
 
                     <Accordion title="Транскрипция">
-                        <Text style={styles.bodyText}>{consultation.raw_transcription || 'Нет данных'}</Text>
+                        <Text style={styles.bodyText}>{data.raw_transcription || 'Транскрипция пока отсутствует'}</Text>
                     </Accordion>
 
-                    <Accordion title="Диагноз (МКБ-10)">
-                        <Text style={styles.bodyText}>Код: {consultation.diagnosis_code || '—'}</Text>
+                    <Accordion title="Жалобы пациента">
+                        {editing ? (
+                            <TextInput style={styles.editInput} value={editForm.complaints || ''} onChangeText={(t) => setEditForm({...editForm, complaints: t})} multiline placeholder="Жалобы пациента" />
+                        ) : (
+                            <Text style={styles.bodyText}>{report.complaints || '—'}</Text>
+                        )}
                     </Accordion>
 
-                    <Accordion title="Отчёт">
-                        <Text style={styles.bodyText}>{report || (status === 'processing' ? 'Отчёт генерируется...' : 'Нет данных')}</Text>
+                    <Accordion title="Анамнез заболевания">
+                        {editing ? (
+                            <TextInput style={styles.editInput} value={editForm.anamnesis || ''} onChangeText={(t) => setEditForm({...editForm, anamnesis: t})} multiline placeholder="Анамнез заболевания" />
+                        ) : (
+                            <Text style={styles.bodyText}>{report.anamnesis || '—'}</Text>
+                        )}
                     </Accordion>
+
+                    <Accordion title="Предварительный диагноз">
+                        {editing ? (
+                            <TextInput style={styles.editInput} value={editForm.diagnosis || ''} onChangeText={(t) => setEditForm({...editForm, diagnosis: t})} multiline placeholder="Предварительный диагноз" />
+                        ) : (
+                            <Text style={styles.bodyText}>{report.diagnosis || '—'}</Text>
+                        )}
+                    </Accordion>
+
+                    <Accordion title="Назначения и рекомендации">
+                        {editing ? (
+                            <TextInput style={styles.editInput} value={editForm.recommendations || ''} onChangeText={(t) => setEditForm({...editForm, recommendations: t})} multiline placeholder="Назначения и рекомендации" />
+                        ) : (
+                            <Text style={styles.bodyText}>{report.recommendations || '—'}</Text>
+                        )}
+                    </Accordion>
+
+                    <Accordion title={`Снимки (${data.images_count || 0})`}>
+                        {(!data.analysis_images || data.analysis_images.length === 0) ? (
+                            <Text style={styles.bodyText}>Нет снимков</Text>
+                        ) : (
+                            data.analysis_images.map((img) => (
+                                <Text key={img.id} style={styles.bodyText}>• {img.description || 'Снимок'}</Text>
+                            ))
+                        )}
+                    </Accordion>
+
+                    {/* --- EDIT SAVE/CANCEL --- */}
+                    {editing && (
+                        <View style={styles.actionRow}>
+                            <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#32CD32' }]} onPress={handleSaveReport}>
+                                <Text style={styles.actionButtonText}>СОХРАНИТЬ</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#999' }]} onPress={() => setEditing(false)}>
+                                <Text style={styles.actionButtonText}>ОТМЕНА</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                     {/* --- BOTTOM ACTIONS --- */}
                     <View style={styles.actionRow}>
-                        <TouchableOpacity style={styles.actionButton}>
-                            <Text style={styles.actionButtonText}>ПОДРОБНЕЕ</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.actionButton}>
-                            <Text style={styles.actionButtonText}>ЭКСПОРТ PDF</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    <TouchableOpacity style={styles.createNewButton}>
-                        <Text style={styles.createNewText}>Создать новый на основе этого</Text>
-                    </TouchableOpacity>
-
-                    <View style={styles.fabContainer}>
-                        <View style={styles.fabOuterRing}>
-                            <View style={styles.fabInnerRing}>
-                                <TouchableOpacity style={styles.fabButton} activeOpacity={0.8}>
-                                    <MaterialCommunityIcons name="microphone" size={45} color="#FFF" />
+                        {status === 'created' && (
+                            <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#32CD32' }]} onPress={handleStartProcessing}>
+                                <Text style={styles.actionButtonText}>▶ ЗАПУСТИТЬ</Text>
+                            </TouchableOpacity>
+                        )}
+                        {status === 'ready' && (
+                            <>
+                                <TouchableOpacity style={styles.actionButton} onPress={handleDownloadPDF}>
+                                    <Text style={styles.actionButtonText}>СКАЧАТЬ PDF</Text>
                                 </TouchableOpacity>
-                            </View>
-                        </View>
+                                <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#F39C12' }]} onPress={handleRegenerate}>
+                                    <Text style={styles.actionButtonText}>ПЕРЕГЕНЕРИРОВАТЬ</Text>
+                                </TouchableOpacity>
+                            </>
+                        )}
+                        {status === 'error' && (
+                            <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#F39C12' }]} onPress={handleStartProcessing}>
+                                <Text style={styles.actionButtonText}>ПОВТОРИТЬ</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 </ScrollView>
             </SafeAreaView>
@@ -316,11 +453,41 @@ const styles = StyleSheet.create({
     boldText: {
         fontWeight: 'bold',
     },
+    processingCard: {
+        backgroundColor: '#F0F9FF',
+        borderRadius: 8,
+        padding: 24,
+        alignItems: 'center',
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#E0F7FA',
+    },
+    processingTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 8,
+    },
+    processingSubtitle: {
+        fontSize: 14,
+        color: '#999',
+        textAlign: 'center',
+    },
     actionRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginTop: 10,
         marginBottom: 20,
+    },
+    editInput: {
+        fontSize: 14,
+        color: '#333',
+        borderWidth: 1,
+        borderColor: '#DDD',
+        borderRadius: 6,
+        padding: 10,
+        minHeight: 80,
+        textAlignVertical: 'top',
     },
     actionButton: {
         backgroundColor: PRIMARY_COLOR,
@@ -333,15 +500,6 @@ const styles = StyleSheet.create({
         color: '#FFF',
         fontWeight: 'bold',
         fontSize: 14,
-    },
-    createNewButton: {
-        alignItems: 'center',
-        marginBottom: 30,
-    },
-    createNewText: {
-        color: PRIMARY_COLOR,
-        fontSize: 18,
-        fontWeight: '500',
     },
     fabContainer: {
         alignItems: 'center',

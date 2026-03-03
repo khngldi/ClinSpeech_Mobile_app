@@ -6,7 +6,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import WelcomeScreen from './auth/WelcomeScreen';
 import TabNavigator from './navigation/TabNavigator';
-import SettingsScreen from './screens/Settings';
 import RecordPage from './screens/RecordPage';
 import ConfirmScreen from "./screens/ConfirmScreen";
 import DetailScreen from './screens/DetailScreen';
@@ -31,7 +30,6 @@ export default function App() {
                     <Stack.Screen name="Welcome" component={WelcomeScreen} />
                     <Stack.Screen name="PasswordForgot" component={PasswordForgotScreen} />
                     <Stack.Screen name="MainTabs" component={TabNavigator} />
-                    <Stack.Screen name="Settings" component={SettingsScreen} />
                     <Stack.Screen name="RecordPage" component={RecordPage} options={{ animation: 'fade' }}/>
                     <Stack.Screen name="ConfirmScreen" component={ConfirmScreen} />
                     <Stack.Screen name="Detail" component={DetailScreen} />
