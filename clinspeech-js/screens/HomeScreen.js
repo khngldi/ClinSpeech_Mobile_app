@@ -1,12 +1,26 @@
-import React, { useState } from 'react'; // Добавили useState
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { apiFetch, safeJson } from '../api';
 
 import { homeStyles as styles } from '../styles/HomeStyles';
 
 export default function HomeScreen({ navigation }) {
     const [language, setLanguage] = useState('RUS');
+    const [doctorName, setDoctorName] = useState('');
+
+    useEffect(() => {
+        apiFetch('/me/')
+            .then(safeJson)
+            .then(data => {
+                const name = data.first_name
+                    ? `${data.last_name} ${data.first_name}`
+                    : data.username || '';
+                setDoctorName(name);
+            })
+            .catch(() => {});
+    }, []);
 
     return (
         <LinearGradient
@@ -42,7 +56,7 @@ export default function HomeScreen({ navigation }) {
                 </View>
 
                 <View style={styles.content}>
-                    <Text style={styles.title}>Добро пожаловать,{'\n'}Доктор [Имя]!</Text>
+                    <Text style={styles.title}>Добро пожаловать,{'\n'}{doctorName ? `Др. ${doctorName}!` : 'Доктор!'}</Text>
                     <Text style={styles.subtitle}>
                         Начните свой первый{'\n'}прием, чтобы создать отчет
                     </Text>

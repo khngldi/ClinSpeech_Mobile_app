@@ -13,9 +13,11 @@ import {
     Platform,
     Animated,
     Easing,
-    KeyboardAvoidingView
+    KeyboardAvoidingView,
+    ActivityIndicator
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { BASE_URL, safeJson } from '../api';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const BRAND_CYAN = '#00CCFF';
@@ -27,6 +29,9 @@ export default function RegisterScreen() {
     const slideAnim = useRef(new Animated.Value(30)).current;
     const codeInputRef = useRef(null);
     const navigation = useNavigation();
+
+    const [apiError, setApiError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     const [form, setForm] = useState({
         lastName: '',
@@ -116,8 +121,51 @@ export default function RegisterScreen() {
         </View>
     );
 
-    const nextStep = () => {
-        if (step < TOTAL_STEPS) setStep(prev => prev + 1);
+    const nextStep = async () => {
+        setApiError('');
+        try {
+            if (step === 2) {
+                // Отправляем код на email
+                setIsLoading(true);
+                const r = await fetch(`${BASE_URL}/send-code/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: form.email }),
+                });
+                if (!r.ok) {
+                    const d = await safeJson(r);
+                    throw new Error(d.detail || d.email?.[0] || 'Ошибка отправки кода');
+                }
+            }
+            if (step === 4) {
+                // Регистрация
+                setIsLoading(true);
+                const r = await fetch(`${BASE_URL}/register/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: form.email,
+                        password: form.password,
+                        email: form.email,
+                        first_name: form.firstName,
+                        last_name: form.lastName,
+                        middle_name: form.middleName,
+                        role: 'doctor',
+                        phone: '',
+                    }),
+                });
+                if (!r.ok) {
+                    const d = await safeJson(r);
+                    const msg = d.detail || d.username?.[0] || d.email?.[0] || d.password?.[0] || 'Ошибка регистрации';
+                    throw new Error(msg);
+                }
+            }
+            if (step < TOTAL_STEPS) setStep(prev => prev + 1);
+        } catch (e) {
+            setApiError(e.message);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const renderWizard = () => (
@@ -176,7 +224,11 @@ export default function RegisterScreen() {
 
             {step <= 4 && canProceed() && (
                 <View style={styles.buttonContainer}>
-                    <MainButton title="ДАЛЕЕ" onPress={nextStep}/>
+                    {apiError ? <Text style={{ color: 'red', textAlign: 'center', marginBottom: 8 }}>{apiError}</Text> : null}
+                    {isLoading
+                        ? <ActivityIndicator color={BRAND_CYAN} size="large" />
+                        : <MainButton title="ДАЛЕЕ" onPress={nextStep}/>
+                    }
                 </View>
             )}
         </ScrollView>

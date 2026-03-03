@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Audio } from 'expo-av';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { apiFetch, safeJson } from '../api';
 
 export default function ConfirmScreen({ route, navigation }) {
-    const { audioUri } = route.params; // Получаем путь к файлу
+    const { audioUri } = route.params;
     const [sound, setSound] = useState();
     const [isPlaying, setIsPlaying] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
 
     // Подгружаем аудио при открытии
     useEffect(() => {
@@ -37,32 +38,33 @@ export default function ConfirmScreen({ route, navigation }) {
 
     const handleSave = async () => {
         try {
-            // 1. Создаем объект новой записи
-            const newRecord = {
-                id: Date.now().toString(),
+            setIsUploading(true);
+
+            const formData = new FormData();
+            formData.append('audio_file', {
                 uri: audioUri,
-                date: new Date().toLocaleString(),
-                name: `Запись ${new Date().toLocaleTimeString()}`
-            };
-
-            // 2. Получаем старый список
-            const existingRecords = await AsyncStorage.getItem('my_recordings');
-            let newRecords = existingRecords ? JSON.parse(existingRecords) : [];
-
-            // 3. Добавляем новую запись
-            newRecords.unshift(newRecord); // Добавляем в начало списка
-
-            // 4. Сохраняем обратно в память телефона
-            await AsyncStorage.setItem('my_recordings', JSON.stringify(newRecords));
-
-            // 5. Переходим сразу на экран списка (внутри Таб-бара)
-            navigation.navigate('MainTabs', {
-                screen: 'Главная',
-                params: { screen: 'HomeList' }
+                type: 'audio/m4a',
+                name: `consultation_${Date.now()}.m4a`,
             });
 
+            const response = await apiFetch('/consultations/', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const err = await safeJson(response);
+                throw new Error(err.detail || 'Ошибка при отправке');
+            }
+
+            navigation.navigate('MainTabs', {
+                screen: 'Главная',
+                params: { screen: 'HomeList' },
+            });
         } catch (e) {
-            Alert.alert('Ошибка', 'Не удалось сохранить запись');
+            Alert.alert('Ошибка', e.message || 'Не удалось отправить запись');
+        } finally {
+            setIsUploading(false);
         }
     };
 
@@ -85,8 +87,11 @@ export default function ConfirmScreen({ route, navigation }) {
                     <Text style={styles.btnText}>Отмена</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-                    <Text style={styles.btnText}>Сохранить</Text>
+                <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={isUploading}>
+                    {isUploading
+                        ? <ActivityIndicator color="#005864" />
+                        : <Text style={styles.btnText}>Отправить</Text>
+                    }
                 </TouchableOpacity>
             </View>
         </View>

@@ -1,115 +1,95 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
     StyleSheet,
     FlatList,
     TouchableOpacity,
+    ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { apiFetch, safeJson } from '../api';
 
 const TAB_HEIGHT = 65;
 
-const DATA = [
-    {
-        id: '1',
-        status: 'ready',
-        statusText: 'Готово',
-        date: '28.12.2025, 15:31',
-        name: 'Аббасов Р. Ш.',
-        diagnosis: 'Острый цистит',
-        doctor: 'Семейный врач (ВОП)',
-    },
-    {
-        id: '2',
-        status: 'sending',
-        statusText: 'Отправка',
-        date: '28.12.2025, 15:31',
-        name: 'Аббасов Р. Ш.',
-        diagnosis: 'Острый цистит',
-        doctor: 'Семейный врач (ВОП)',
-    },
-    {
-        id: '3',
-        status: 'error',
-        statusText: 'Ошибка сети',
-        date: '27.12.2025, 18:02',
-        name: 'Ибраев А. К.',
-        diagnosis: 'ОРВИ',
-        doctor: 'Терапевт',
-    },
-];
-
-const statusColors = {
-    ready: '#2ECC71',
-    sending: '#F1C40F',
-    error: '#E74C3C',
-    draft: '#B0B0B0',
+const statusMap = {
+    pending:    { text: 'Ожидание',  color: '#B0B0B0' },
+    processing: { text: 'Обработка', color: '#F1C40F' },
+    done:       { text: 'Готово',    color: '#2ECC71' },
+    error:      { text: 'Ошибка',    color: '#E74C3C' },
 };
 
+function formatDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
 export default function ListScreen({ navigation }) {
+    const [consultations, setConsultations] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const renderItem = ({ item }) => (
-        <TouchableOpacity
-            style={styles.card}
-            activeOpacity={0.8}
-            onPress={() => {
-                if (item.id === '1') {
-                    navigation.navigate('Detail');
-                }
-            }}
-        >
-            <View style={styles.cardHeader}>
-                <View style={styles.statusRow}>
-                    <View
-                        style={[
-                            styles.statusDot,
-                            { backgroundColor: statusColors[item.status] }
-                        ]}
-                    />
-                    <Text
-                        style={[
-                            styles.statusText,
-                            { color: statusColors[item.status] }
-                        ]}
-                    >
-                        {item.statusText}
-                    </Text>
-                </View>
-                <Text style={styles.dateText}>{item.date}</Text>
-            </View>
+    useEffect(() => {
+        apiFetch('/consultations/')
+            .then(safeJson)
+            .then(data => setConsultations(Array.isArray(data) ? data : data.results || []))
+            .catch(() => {})
+            .finally(() => setLoading(false));
+    }, []);
 
-            <View style={styles.cardBody}>
-                <View style={{ flex: 1 }}>
-                    <Text style={styles.nameText}>{item.name}</Text>
-                    <Text style={styles.infoText}>{item.diagnosis}</Text>
-                    <Text style={styles.infoText}>{item.doctor}</Text>
+    const renderItem = ({ item }) => {
+        const status = statusMap[item.status] || { text: item.status, color: '#B0B0B0' };
+        const patient = item.patient_info;
+        const patientName = patient
+            ? `${patient.last_name || ''} ${(patient.first_name || '')[0] || ''}.`
+            : 'Пациент не указан';
+
+        return (
+            <TouchableOpacity
+                style={styles.card}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('Detail', { consultation: item })}
+            >
+                <View style={styles.cardHeader}>
+                    <View style={styles.statusRow}>
+                        <View style={[styles.statusDot, { backgroundColor: status.color }]} />
+                        <Text style={[styles.statusText, { color: status.color }]}>{status.text}</Text>
+                    </View>
+                    <Text style={styles.dateText}>{formatDate(item.created_at)}</Text>
                 </View>
 
-                <Ionicons name="chevron-forward" size={26} color="#000" />
-            </View>
-        </TouchableOpacity>
-    );
+                <View style={styles.cardBody}>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.nameText}>{patientName}</Text>
+                        <Text style={styles.infoText}>{item.diagnosis_code || '—'}</Text>
+                        <Text style={styles.infoText}>{item.doctor_name || ''}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={26} color="#000" />
+                </View>
+            </TouchableOpacity>
+        );
+    };
 
     return (
         <View style={styles.container}>
-            <LinearGradient
-                colors={['#B8F4FF', '#00B4DB']}
-                style={StyleSheet.absoluteFill}
-            />
-
+            <LinearGradient colors={['#B8F4FF', '#00B4DB']} style={StyleSheet.absoluteFill} />
             <Text style={styles.title}>Последние записи</Text>
 
-            <View style={styles.scrollContainer}>
-                <FlatList
-                    data={DATA}
-                    keyExtractor={(item) => item.id}
-                    renderItem={renderItem}
-                    contentContainerStyle={styles.list}
-                    showsVerticalScrollIndicator
-                />
-            </View>
+            {loading ? (
+                <ActivityIndicator size="large" color="#fff" style={{ marginTop: 40 }} />
+            ) : (
+                <View style={styles.scrollContainer}>
+                    <FlatList
+                        data={consultations}
+                        keyExtractor={(item) => String(item.id)}
+                        renderItem={renderItem}
+                        contentContainerStyle={styles.list}
+                        showsVerticalScrollIndicator
+                        ListEmptyComponent={<Text style={styles.emptyText}>Консультаций пока нет</Text>}
+                    />
+                </View>
+            )}
         </View>
     );
 }
@@ -181,5 +161,11 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#333',
         marginTop: 2,
+    },
+    emptyText: {
+        textAlign: 'center',
+        color: '#fff',
+        marginTop: 40,
+        fontSize: 16,
     },
 });
