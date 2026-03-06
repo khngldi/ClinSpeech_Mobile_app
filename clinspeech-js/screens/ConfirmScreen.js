@@ -70,7 +70,7 @@ export default function ConfirmScreen({ route, navigation }) {
 
     return (
         <View style={styles.container}>
-            <LinearGradient colors={['#AFF1FF', '#00C0E8']} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={['#f0fdfa', '#5eead4', '#2ec4b6']} style={StyleSheet.absoluteFill} />
 
             <Text style={styles.title}>Обработать?</Text>
 
@@ -78,7 +78,7 @@ export default function ConfirmScreen({ route, navigation }) {
             <View style={styles.playerContainer}>
                 <Ionicons name="musical-note" size={80} color="white" />
                 <TouchableOpacity style={styles.playButton} onPress={playSound}>
-                    <Ionicons name={isPlaying ? "pause" : "play"} size={40} color="#00C0E8" />
+                    <Ionicons name={isPlaying ? "pause" : "play"} size={40} color="#2ec4b6" />
                 </TouchableOpacity>
             </View>
 
@@ -89,7 +89,7 @@ export default function ConfirmScreen({ route, navigation }) {
 
                 <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={isUploading}>
                     {isUploading
-                        ? <ActivityIndicator color="#005864" />
+                        ? <ActivityIndicator color="#14b8a6" />
                         : <Text style={styles.btnText}>Отправить</Text>
                     }
                 </TouchableOpacity>
@@ -111,5 +111,5 @@ const styles = StyleSheet.create({
     buttonsRow: { flexDirection: 'row', gap: 20 },
     saveBtn: { backgroundColor: 'white', paddingVertical: 15, paddingHorizontal: 40, borderRadius: 30 },
     cancelBtn: { backgroundColor: 'rgba(255,255,255,0.3)', paddingVertical: 15, paddingHorizontal: 40, borderRadius: 30 },
-    btnText: { color: '#005864', fontWeight: 'bold', fontSize: 16 }
+    btnText: { color: '#14b8a6', fontWeight: 'bold', fontSize: 16 }
 });

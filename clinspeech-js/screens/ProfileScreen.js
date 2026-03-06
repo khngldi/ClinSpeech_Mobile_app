@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiFetch, safeJson, BASE_URL } from '../api';
 
-const PRIMARY = '#00C0E8';
+const PRIMARY = '#2ec4b6';
 const ROLE_LABELS = { admin: 'Администратор', doctor: 'Врач', patient: 'Пациент' };
 
 export default function ProfileScreen({ navigation }) {

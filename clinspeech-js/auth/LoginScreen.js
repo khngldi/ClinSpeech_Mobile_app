@@ -19,7 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL, safeJson } from '../api';
 
 const { width } = Dimensions.get('window');
-const BRAND_CYAN = '#00C0E8';
+const BRAND_CYAN = '#2ec4b6';
 
 export default function LoginScreen({ navigation }) {
 
@@ -64,7 +64,7 @@ export default function LoginScreen({ navigation }) {
 
     return (
         <LinearGradient
-            colors={['#AFF1FF', '#00C0E8']}
+            colors={['#f0fdfa', '#5eead4', '#2ec4b6']}
             style={styles.gradientContainer}
         >
             <SafeAreaView style={{ flex: 1 }}>

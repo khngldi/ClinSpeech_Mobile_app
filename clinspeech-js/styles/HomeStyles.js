@@ -45,7 +45,7 @@ export const homeStyles = StyleSheet.create({
     activeLangText: {
         fontWeight: 'bold',
         opacity: 1,
-        color: 'cyan',
+        color: '#2ec4b6',
     },
 
     content: {

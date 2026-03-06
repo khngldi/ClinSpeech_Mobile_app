@@ -95,7 +95,7 @@ export default function WelcomeScreen({ navigation }) {
 
                     <View style={styles.imageWrapper}>
                         <Image
-                            source={require('../assets/App_icon.png')}
+                            source={require('../assets/App_logo.png')}
                             style={styles.logo}
                             resizeMode="contain"
                         />

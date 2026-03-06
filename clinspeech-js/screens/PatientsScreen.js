@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { apiFetch, safeJson } from '../api';
 
-const PRIMARY = '#00C0E8';
+const PRIMARY = '#2ec4b6';
 
 export default function PatientsScreen({ navigation }) {
   const [patients, setPatients] = useState([]);

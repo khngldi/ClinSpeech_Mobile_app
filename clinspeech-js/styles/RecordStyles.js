@@ -1,6 +1,10 @@
 // styles/RecordStyles.js
 import { StyleSheet } from 'react-native';
 
+const MINT = '#2ec4b6';
+const MINT_LIGHT = '#5eead4';
+const MINT_BG = '#f0fdfa';
+
 export const recordStyles = StyleSheet.create({
     master: {
         flex: 1,
@@ -20,8 +24,8 @@ export const recordStyles = StyleSheet.create({
         zIndex: 10,
     },
     center: {
-        width: 180,
-        height: 180,
+        width: 200,
+        height: 200,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -30,7 +34,7 @@ export const recordStyles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: 'rgba(201, 246, 255, 0.3)',
+        backgroundColor: 'rgba(46, 196, 182, 0.3)',
     },
     button: {
         width: '100%',

@@ -23,7 +23,7 @@ export default function HomeScreen({ navigation }) {
 
     return (
         <LinearGradient
-            colors={['#AFF1FF', '#00C0E8']}
+            colors={['#f0fdfa', '#5eead4', '#2ec4b6']}
             style={styles.container}
         >
             <SafeAreaView style={styles.safeArea}>

@@ -102,7 +102,7 @@ function CustomTabBar({ state, navigation }) {
             {isMenuOpen && (
                 <Animated.View style={[tabStyles.subMenuContainer, menuStyle]}>
                     <LinearGradient
-                        colors={['#29D8FF', '#0088A4']}
+                        colors={['#5eead4', '#2ec4b6']}
                         style={tabStyles.gradientBackground}
                     >
                         <TouchableOpacity
@@ -143,7 +143,7 @@ function CustomTabBar({ state, navigation }) {
 
             <View style={tabStyles.mainTabBarContainer}>
                 <LinearGradient
-                    colors={['#29D8FF', '#0088A4']}
+                    colors={['#5eead4', '#2ec4b6']}
                     style={StyleSheet.absoluteFill}
                 />
 

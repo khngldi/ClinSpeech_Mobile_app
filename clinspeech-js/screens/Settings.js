@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiFetch, safeJson } from '../api';
 
-const PRIMARY = '#00C0E8';
+const PRIMARY = '#2ec4b6';
 
 export default function SettingsScreen({ navigation }) {
     const [language, setLanguage] = useState('RUS');

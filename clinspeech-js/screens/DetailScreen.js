@@ -14,7 +14,7 @@ import {
 import { Ionicons, MaterialIcons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { apiFetch, safeJson } from '../api';
 
-const PRIMARY_COLOR = '#00BFFF';
+const PRIMARY_COLOR = '#2ec4b6';
 const { height: windowHeight } = Dimensions.get('window');
 
 const Accordion = ({ title, children, isOpenDefault = false }) => {

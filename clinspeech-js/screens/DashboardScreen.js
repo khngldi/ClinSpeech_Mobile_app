@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { apiFetch, safeJson } from '../api';
 
-const PRIMARY = '#00C0E8';
+const PRIMARY = '#2ec4b6';
 const STATUS_COLORS = { created: '#9CA3AF', processing: '#3B82F6', generating: '#F59E0B', ready: '#22C55E', error: '#EF4444' };
 const STATUS_LABELS = { created: 'Создано', processing: 'Обработка', generating: 'Генерация', ready: 'Готово', error: 'Ошибка' };
 

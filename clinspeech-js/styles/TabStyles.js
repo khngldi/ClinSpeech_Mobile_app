@@ -72,7 +72,7 @@ export const tabStyles = StyleSheet.create({
         tintColor: '#fff',
     },
     activeBackground: {
-        backgroundColor: '#005864',
+        backgroundColor: '#14b8a6',
     },
     label: {
         fontSize: 14,
