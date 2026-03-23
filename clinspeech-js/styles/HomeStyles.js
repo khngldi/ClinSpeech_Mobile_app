@@ -5,6 +5,7 @@ const { width } = Dimensions.get('window');
 export const homeStyles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: '#f8fafc',
     },
     safeArea: {
         flex: 1,
@@ -20,12 +21,12 @@ export const homeStyles = StyleSheet.create({
         width: 30,
         height: 30,
         resizeMode: 'contain',
-        tintColor: '#fff',
+        tintColor: '#1a1a2e',
     },
 
     langSwitch: {
         flexDirection: 'row',
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        backgroundColor: 'rgba(46, 196, 182, 0.12)',
         borderRadius: 20,
         padding: 2,
     },
@@ -39,7 +40,7 @@ export const homeStyles = StyleSheet.create({
     },
     langText: {
         fontSize: 16,
-        color: '#fff',
+        color: '#64748b',
         opacity: 0.7,
     },
     activeLangText: {
@@ -53,17 +54,19 @@ export const homeStyles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         paddingBottom: 50,
+        position: 'relative',
+        zIndex: 1,
     },
     title: {
         fontSize: 26,
         fontWeight: 'bold',
-        color: '#fff',
+        color: '#1a1a2e',
         textAlign: 'center',
         marginBottom: 10,
     },
     subtitle: {
         fontSize: 18,
-        color: '#fff',
+        color: '#64748b',
         textAlign: 'center',
         marginBottom: 40,
         opacity: 0.9,
@@ -84,7 +87,7 @@ export const homeStyles = StyleSheet.create({
     hintText: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#fff',
+        color: '#1a1a2e',
         textAlign: 'center',
     },
 });

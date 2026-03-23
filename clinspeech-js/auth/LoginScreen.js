@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
     Text,
@@ -12,14 +12,62 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
-    Alert
+    Alert,
+    Animated,
+    Easing,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL, safeJson } from '../api';
 
-const { width } = Dimensions.get('window');
-const BRAND_CYAN = '#2ec4b6';
+const { width: SW } = Dimensions.get('window');
+const MINT = '#2ec4b6';
+const MINT_LIGHT = '#5eead4';
+const MINT_DARK = '#14b8a6';
+const PURPLE = '#a78bfa';
+
+/* ── Animated floating blob ── */
+function FloatingBlob({ color, size, startX, startY, delay }) {
+    const translateX = useRef(new Animated.Value(0)).current;
+    const translateY = useRef(new Animated.Value(0)).current;
+    const scale = useRef(new Animated.Value(1)).current;
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.delay(delay),
+                Animated.parallel([
+                    Animated.timing(translateX, { toValue: 80, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(translateY, { toValue: -60, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(scale, { toValue: 1.2, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                ]),
+                Animated.parallel([
+                    Animated.timing(translateX, { toValue: -50, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(translateY, { toValue: 90, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(scale, { toValue: 0.85, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                ]),
+                Animated.parallel([
+                    Animated.timing(translateX, { toValue: 60, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(translateY, { toValue: 40, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(scale, { toValue: 1.1, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                ]),
+                Animated.parallel([
+                    Animated.timing(translateX, { toValue: 0, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(translateY, { toValue: 0, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(scale, { toValue: 1, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                ]),
+            ])
+        ).start();
+    }, []);
+
+    return (
+        <Animated.View style={{
+            position: 'absolute', left: startX, top: startY,
+            width: size, height: size, borderRadius: size / 2,
+            backgroundColor: color, opacity: 0.25,
+            transform: [{ translateX }, { translateY }, { scale }],
+        }} />
+    );
+}
 
 export default function LoginScreen({ navigation }) {
 
@@ -63,10 +111,15 @@ export default function LoginScreen({ navigation }) {
     };
 
     return (
-        <LinearGradient
-            colors={['#f0fdfa', '#5eead4', '#2ec4b6']}
-            style={styles.gradientContainer}
-        >
+        <View style={styles.gradientContainer}>
+            {/* Animated gradient blobs */}
+            <View style={styles.blobLayer} pointerEvents="none">
+                <FloatingBlob color={MINT} size={280} startX={-70} startY={30} delay={0} />
+                <FloatingBlob color={MINT_LIGHT} size={220} startX={SW - 120} startY={150} delay={2000} />
+                <FloatingBlob color={PURPLE} size={200} startX={20} startY={400} delay={4500} />
+                <FloatingBlob color={MINT_DARK} size={240} startX={SW - 180} startY={500} delay={7000} />
+            </View>
+
             <SafeAreaView style={{ flex: 1 }}>
                 <KeyboardAvoidingView
                     behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -153,7 +206,7 @@ export default function LoginScreen({ navigation }) {
                             >
                                 <Text style={styles.registerText}>
                                     Нет аккаунта?{' '}
-                                    <Text style={{ color: BRAND_CYAN }}>
+                                    <Text style={{ color: MINT }}>
                                         Зарегистрироваться
                                     </Text>
                                 </Text>
@@ -163,24 +216,25 @@ export default function LoginScreen({ navigation }) {
                     </ScrollView>
                 </KeyboardAvoidingView>
             </SafeAreaView>
-        </LinearGradient>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    gradientContainer: { flex: 1 },
-    container: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+    gradientContainer: { flex: 1, backgroundColor: '#f8fafc' },
+    blobLayer: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
+    container: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 20, position: 'relative', zIndex: 1 },
     logoWrapper: { alignItems: 'center', marginBottom: 40 },
     logo: { width: 60, height: 60 },
-    appTitle: { fontSize: 28, fontWeight: 'bold', color: '#FFF', marginTop: 10 },
-    card: { width: '100%', maxWidth: 400, backgroundColor: '#FFF', borderRadius: 20, padding: 25, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10, elevation: 5 },
+    appTitle: { fontSize: 28, fontWeight: 'bold', color: '#1a1a2e', marginTop: 10 },
+    card: { width: '100%', maxWidth: 400, backgroundColor: '#FFF', borderRadius: 20, padding: 25, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 16, elevation: 5 },
     title: { fontSize: 24, fontWeight: 'bold', marginBottom: 5, color: '#1F2937' },
     subtitle: { color: '#666', marginBottom: 20 },
     input: { borderWidth: 1, borderColor: '#DDD', borderRadius: 12, padding: 14, marginBottom: 15, fontSize: 16 },
-    button: { backgroundColor: BRAND_CYAN, padding: 15, borderRadius: 12, alignItems: 'center', marginTop: 10 },
+    button: { backgroundColor: MINT, padding: 15, borderRadius: 12, alignItems: 'center', marginTop: 10 },
     buttonText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
     errorText: { color: 'red', marginBottom: 10 },
-    link: { color: BRAND_CYAN, textAlign: 'center', marginTop: 15 },
+    link: { color: MINT, textAlign: 'center', marginTop: 15 },
     dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 20 },
     divider: { flex: 1, height: 1, backgroundColor: '#DDD' },
     dividerText: { marginHorizontal: 10, color: '#999' },

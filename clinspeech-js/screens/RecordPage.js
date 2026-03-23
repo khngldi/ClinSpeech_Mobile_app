@@ -318,9 +318,7 @@ export default function RecordPage({ navigation }) {
 
     return (
         <View style={st.container}>
-            <LinearGradient colors={[MINT_BG, MINT_LIGHT, MINT]} style={StyleSheet.absoluteFillObject} />
-
-            {/* Animated floating blobs */}
+            {/* Animated floating blobs on white background */}
             <View style={st.blobLayer} pointerEvents="none">
                 <FloatingBlob color={MINT} size={280} startX={-60} startY={50} delay={0} />
                 <FloatingBlob color={MINT_LIGHT} size={220} startX={SW - 140} startY={200} delay={2000} />
@@ -332,7 +330,7 @@ export default function RecordPage({ navigation }) {
                 {/* Header */}
                 <View style={st.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()}>
-                        <Ionicons name="chevron-back" size={28} color="#fff" />
+                        <Ionicons name="chevron-back" size={28} color="#1a1a2e" />
                     </TouchableOpacity>
                     <Text style={st.headerTitle}>Новая запись</Text>
                     <View style={{ width: 28 }} />
@@ -343,9 +341,9 @@ export default function RecordPage({ navigation }) {
                     {[1, 2, 3].map(s => (
                         <View key={s} style={st.stepRow}>
                             <View style={[st.stepCircle, step >= s && st.stepActive]}>
-                                <Text style={[st.stepNum, step >= s && { color: MINT_DARK }]}>{s}</Text>
+                                <Text style={[st.stepNum, step >= s && { color: '#fff' }]}>{s}</Text>
                             </View>
-                            <Text style={[st.stepLabel, step >= s && { color: '#fff' }]}>
+                            <Text style={[st.stepLabel, step >= s && { color: MINT_DARK }]}>
                                 {{ 1: 'Пациент', 2: 'Запись', 3: 'Отправка' }[s]}
                             </Text>
                             {s < 3 && <View style={[st.stepLine, step > s && st.stepLineActive]} />}
@@ -447,7 +445,7 @@ export default function RecordPage({ navigation }) {
                                                     }),
                                                     backgroundColor: isRecording && !isPaused
                                                         ? (i % 2 === 0 ? MINT : MINT_LIGHT)
-                                                        : 'rgba(255,255,255,0.3)',
+                                                        : 'rgba(46,196,182,0.2)',
                                                 }]}
                                             />
                                         ))}
@@ -588,18 +586,18 @@ export default function RecordPage({ navigation }) {
 }
 
 const st = StyleSheet.create({
-    container: { flex: 1 },
-    blobLayer: { ...StyleSheet.absoluteFillObject, overflow: 'hidden', opacity: 0.6 },
+    container: { flex: 1, backgroundColor: '#f8fafc' },
+    blobLayer: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10 },
-    headerTitle: { fontSize: 18, fontWeight: '700', color: '#fff' },
+    headerTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a2e' },
     steps: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, marginBottom: 20 },
     stepRow: { flexDirection: 'row', alignItems: 'center' },
-    stepCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.3)', justifyContent: 'center', alignItems: 'center' },
-    stepActive: { backgroundColor: 'rgba(255,255,255,0.9)' },
-    stepNum: { fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.6)' },
-    stepLabel: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginLeft: 4, fontWeight: '500' },
-    stepLine: { width: 20, height: 2, backgroundColor: 'rgba(255,255,255,0.2)', marginHorizontal: 6 },
-    stepLineActive: { backgroundColor: 'rgba(255,255,255,0.8)' },
+    stepCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(46,196,182,0.15)', justifyContent: 'center', alignItems: 'center' },
+    stepActive: { backgroundColor: MINT },
+    stepNum: { fontSize: 13, fontWeight: '700', color: '#94a3b8' },
+    stepLabel: { fontSize: 12, color: '#94a3b8', marginLeft: 4, fontWeight: '500' },
+    stepLine: { width: 20, height: 2, backgroundColor: 'rgba(46,196,182,0.2)', marginHorizontal: 6 },
+    stepLineActive: { backgroundColor: MINT },
     stepContent: { flex: 1, paddingHorizontal: 16, justifyContent: 'center' },
     errorBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEF2F2', marginHorizontal: 16, padding: 12, borderRadius: 12, marginBottom: 10, gap: 8 },
     errorText: { color: '#E74C3C', fontSize: 13, flex: 1 },
@@ -619,14 +617,14 @@ const st = StyleSheet.create({
     nextBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
     // Step 2: Shazam-style recording
     recordContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
-    shazamTimer: { fontSize: 56, fontWeight: '200', letterSpacing: 4, color: '#fff', marginBottom: 32, textShadowColor: 'rgba(0,0,0,0.1)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
+    shazamTimer: { fontSize: 56, fontWeight: '200', letterSpacing: 4, color: '#1a1a2e', marginBottom: 32 },
     shazamCenter: { width: 200, height: 200, alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
     waveBarsRow: { position: 'absolute', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, width: 200 },
     waveBar: { width: 6, borderRadius: 3 },
     shazamBtn: { width: 110, height: 110, borderRadius: 55, shadowColor: MINT, shadowOpacity: 0.35, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 8 },
     shazamBtnRecording: { shadowOpacity: 0.5, shadowRadius: 24 },
     shazamBtnGrad: { width: 110, height: 110, borderRadius: 55, alignItems: 'center', justifyContent: 'center' },
-    shazamHint: { color: 'rgba(255,255,255,0.8)', fontSize: 14, marginBottom: 32 },
+    shazamHint: { color: '#64748b', fontSize: 14, marginBottom: 32 },
     shazamControls: { flexDirection: 'row', gap: 14 },
     shazamCtrlBtn: {
         flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -643,9 +641,9 @@ const st = StyleSheet.create({
     playBtn: { width: 72, height: 72, borderRadius: 36, marginBottom: 24, shadowColor: MINT, shadowOpacity: 0.4, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
     playBtnGrad: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
     backBtnFloat: { position: 'absolute', bottom: 24, left: 24 },
-    backBtnText: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: '500' },
+    backBtnText: { color: '#94a3b8', fontSize: 14, fontWeight: '500' },
     backBtn: { alignItems: 'center', paddingVertical: 14 },
-    backBtnTextAlt: { color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: '500' },
+    backBtnTextAlt: { color: '#94a3b8', fontSize: 14, fontWeight: '500' },
     // Confirm
     confirmItem: { backgroundColor: MINT_BG, borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: MINT_LIGHT + '30' },
     confirmLabel: { fontSize: 12, color: '#888' },
