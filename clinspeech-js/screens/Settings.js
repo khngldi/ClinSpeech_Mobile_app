@@ -7,18 +7,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiFetch, safeJson } from '../api';
+import { useLocale } from '../i18n/LocaleContext';
+import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 
 const PRIMARY = '#2ec4b6';
 
 export default function SettingsScreen({ navigation }) {
-    const [language, setLanguage] = useState('RUS');
+    const { locale, setLocale, t } = useLocale();
     const [notifications, setNotifications] = useState(true);
     const [autoProcess, setAutoProcess] = useState(true);
     const [user, setUser] = useState(null);
 
     useEffect(() => {
         apiFetch('/me/').then(safeJson).then(setUser).catch(() => {});
-        AsyncStorage.getItem('setting_language').then(v => v && setLanguage(v));
         AsyncStorage.getItem('setting_notifications').then(v => v !== null && setNotifications(v === 'true'));
         AsyncStorage.getItem('setting_autoprocess').then(v => v !== null && setAutoProcess(v === 'true'));
     }, []);
@@ -27,11 +28,18 @@ export default function SettingsScreen({ navigation }) {
         await AsyncStorage.setItem(key, String(value));
     };
 
+    const handleLanguageChange = (lang) => {
+        const newLocale = lang === 'KZ' ? 'kk' : 'ru';
+        setLocale(newLocale);
+    };
+
+    const currentLangDisplay = locale === 'kk' ? 'KZ' : 'RUS';
+
     const handleLogout = () => {
-        Alert.alert('Выйти из аккаунта?', '', [
-            { text: 'Отмена', style: 'cancel' },
+        Alert.alert(t('Выйти из аккаунта?', 'Выйти из аккаунта?'), '', [
+            { text: t('Отмена', 'Отмена'), style: 'cancel' },
             {
-                text: 'Выйти', style: 'destructive',
+                text: t('Выйти', 'Выйти'), style: 'destructive',
                 onPress: async () => {
                     try {
                         const refresh = await AsyncStorage.getItem('refresh_token');
@@ -70,98 +78,102 @@ export default function SettingsScreen({ navigation }) {
     );
 
     return (
-        <SafeAreaView style={s.container}>
-            <View style={s.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <Ionicons name="chevron-back" size={28} color="#333" />
-                </TouchableOpacity>
-                <Text style={s.headerTitle}>Настройки</Text>
-                <View style={{ width: 28 }} />
-            </View>
+        <View style={s.container}>
+            <AnimatedGradientBackground />
+            <SafeAreaView style={s.safeArea}>
+                <View style={s.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()}>
+                        <Ionicons name="chevron-back" size={28} color="#333" />
+                    </TouchableOpacity>
+                    <Text style={s.headerTitle}>{t('Настройки', 'Настройки')}</Text>
+                    <View style={{ width: 28 }} />
+                </View>
 
-            <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-                <Section title="Общие">
-                    <Row
-                        icon="language-outline"
-                        label="Язык"
-                        right={
-                            <View style={s.langSwitch}>
-                                {['RUS', 'KZ'].map(l => (
-                                    <TouchableOpacity
-                                        key={l}
-                                        style={[s.langBtn, language === l && s.langBtnActive]}
-                                        onPress={() => { setLanguage(l); saveSetting('setting_language', l); }}
-                                    >
-                                        <Text style={[s.langText, language === l && s.langTextActive]}>{l}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        }
-                    />
-                    <Row
-                        icon="notifications-outline"
-                        label="Уведомления"
-                        right={
-                            <Switch
-                                value={notifications}
-                                onValueChange={v => { setNotifications(v); saveSetting('setting_notifications', v); }}
-                                trackColor={{ true: PRIMARY }}
-                            />
-                        }
-                    />
-                    <Row
-                        icon="flash-outline"
-                        iconColor="#F59E0B"
-                        label="Авто-обработка ИИ"
-                        right={
-                            <Switch
-                                value={autoProcess}
-                                onValueChange={v => { setAutoProcess(v); saveSetting('setting_autoprocess', v); }}
-                                trackColor={{ true: PRIMARY }}
-                            />
-                        }
-                    />
-                </Section>
+                <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+                    <Section title={t('Общие', 'Общие')}>
+                        <Row
+                            icon="language-outline"
+                            label={t('Язык', 'Язык')}
+                            right={
+                                <View style={s.langSwitch}>
+                                    {['RUS', 'KZ'].map(l => (
+                                        <TouchableOpacity
+                                            key={l}
+                                            style={[s.langBtn, currentLangDisplay === l && s.langBtnActive]}
+                                            onPress={() => handleLanguageChange(l)}
+                                        >
+                                            <Text style={[s.langText, currentLangDisplay === l && s.langTextActive]}>{l}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            }
+                        />
+                        <Row
+                            icon="notifications-outline"
+                            label={t('Уведомления', 'Уведомления')}
+                            right={
+                                <Switch
+                                    value={notifications}
+                                    onValueChange={v => { setNotifications(v); saveSetting('setting_notifications', v); }}
+                                    trackColor={{ true: PRIMARY }}
+                                />
+                            }
+                        />
+                        <Row
+                            icon="flash-outline"
+                            iconColor="#F59E0B"
+                            label={t('Авто-обработка ИИ', 'Авто-обработка ИИ')}
+                            right={
+                                <Switch
+                                    value={autoProcess}
+                                    onValueChange={v => { setAutoProcess(v); saveSetting('setting_autoprocess', v); }}
+                                    trackColor={{ true: PRIMARY }}
+                                />
+                            }
+                        />
+                    </Section>
 
-                <Section title="О приложении">
-                    <Row
-                        icon="information-circle-outline"
-                        iconColor="#3B82F6"
-                        label="Версия"
-                        right={<Text style={s.versionText}>1.0.0</Text>}
-                    />
-                    <Row
-                        icon="help-circle-outline"
-                        iconColor="#22C55E"
-                        label="Поддержка"
-                        right={<Ionicons name="chevron-forward" size={18} color="#ccc" />}
-                        onPress={() => Linking.openURL('mailto:support@clinspeech.kz')}
-                    />
-                </Section>
+                    <Section title={t('О приложении', 'О приложении')}>
+                        <Row
+                            icon="information-circle-outline"
+                            iconColor="#3B82F6"
+                            label={t('Версия', 'Версия')}
+                            right={<Text style={s.versionText}>1.1.0</Text>}
+                        />
+                        <Row
+                            icon="help-circle-outline"
+                            iconColor="#22C55E"
+                            label={t('Поддержка', 'Поддержка')}
+                            right={<Ionicons name="chevron-forward" size={18} color="#ccc" />}
+                            onPress={() => Linking.openURL('mailto:support@clinspeech.kz')}
+                        />
+                    </Section>
 
-                <TouchableOpacity style={s.logoutBtn} onPress={handleLogout}>
-                    <Ionicons name="log-out-outline" size={18} color="#EF4444" />
-                    <Text style={s.logoutText}>Выйти из аккаунта</Text>
-                </TouchableOpacity>
+                    <TouchableOpacity style={s.logoutBtn} onPress={handleLogout}>
+                        <Ionicons name="log-out-outline" size={18} color="#EF4444" />
+                        <Text style={s.logoutText}>{t('Выйти из аккаунта', 'Выйти из аккаунта')}</Text>
+                    </TouchableOpacity>
 
-                {user && (
-                    <Text style={s.userInfo}>
-                        {user.email} · {user.role}
-                    </Text>
-                )}
-            </ScrollView>
-        </SafeAreaView>
+                    {user && (
+                        <Text style={s.userInfo}>
+                            {user.email} · {user.role}
+                        </Text>
+                    )}
+                </ScrollView>
+            </SafeAreaView>
+        </View>
     );
 }
 
 const s = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f5f7fa' },
+    safeArea: { flex: 1 },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, height: 50 },
     headerTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a2e' },
     scroll: { paddingHorizontal: 16, paddingBottom: 100 },
     section: { marginBottom: 20 },
     sectionTitle: { fontSize: 12, fontWeight: '600', color: '#888', textTransform: 'uppercase', marginBottom: 8, marginLeft: 4 },
-    sectionBody: { backgroundColor: '#fff', borderRadius: 14, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
+    sectionBody: { backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 14, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
     row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 14, borderBottomWidth: 0.5, borderBottomColor: '#f0f0f0' },
     iconWrap: { width: 32, height: 32, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
     rowLabel: { flex: 1, fontSize: 15, color: '#333', fontWeight: '500' },

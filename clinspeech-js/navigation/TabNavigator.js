@@ -1,9 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { View, Text, Image, TouchableOpacity, Alert, StyleSheet, Animated } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { apiFetch, safeJson } from '../api';
 
 import HomeScreen from '../screens/HomeScreen';
 import ListScreen from '../screens/ListScreen';
@@ -12,6 +13,13 @@ import PatientsScreen from '../screens/PatientsScreen';
 import ArchiveScreen from '../screens/ArchiveScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SettingsScreen from '../screens/Settings';
+import ChatBotScreen from '../screens/ChatBotScreen';
+import RecordPage from '../screens/RecordPage';
+import NotificationsScreen from '../screens/NotificationsScreen';
+import AppointmentsScreen from '../screens/AppointmentsScreen';
+import TemplatesScreen from '../screens/TemplatesScreen';
+import UsersScreen from '../screens/admin/UsersScreen';
+import AuditLogScreen from '../screens/admin/AuditLogScreen';
 import { tabStyles } from '../styles/TabStyles';
 
 const Tab = createBottomTabNavigator();
@@ -21,27 +29,55 @@ function HomeStackNavigator() {
     return (
         <HomeStack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
             <HomeStack.Screen name="HomeRecord" component={HomeScreen} />
+            <HomeStack.Screen name="RecordPage" component={RecordPage} />
             <HomeStack.Screen name="HomeList" component={ListScreen} />
             <HomeStack.Screen name="HomeDashboard" component={DashboardScreen} />
+            <HomeStack.Screen name="HomeChatBot" component={ChatBotScreen} />
+            <HomeStack.Screen name="AdminUsers" component={UsersScreen} />
+            <HomeStack.Screen name="AdminAuditLog" component={AuditLogScreen} />
         </HomeStack.Navigator>
     );
 }
 
-function CustomTabBar({ state, navigation }) {
+function CustomTabBar({ state, navigation, role }) {
+    const isPatient = role === 'patient';
+    const isAdmin = role === 'admin';
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const animation = useRef(new Animated.Value(0)).current;
 
     const currentRoute = state.routes[state.index];
     const isMainTabFocused = currentRoute.name === 'Главная';
-
     const focusedRouteName = getFocusedRouteNameFromRoute(currentRoute) ?? 'HomeRecord';
 
-    let activeSubOption = '';
-    if (isMainTabFocused) {
-        if (focusedRouteName === 'HomeRecord') activeSubOption = 'Записать';
-        else if (focusedRouteName === 'HomeList') activeSubOption = 'Список';
-        else if (focusedRouteName === 'HomeDashboard') activeSubOption = 'Дэшборд';
-    }
+    const subMenuOptions = useMemo(() => {
+        if (isPatient) {
+            return [
+                { key: 'дашборд', label: 'Дэшборд', icon: require('../assets/favorites.png'), target: 'HomeDashboard' },
+                { key: 'список', label: 'Список', icon: require('../assets/list.png'), target: 'HomeList' },
+                { key: 'чат', label: 'Чат-бот', icon: require('../assets/template.png'), target: 'HomeChatBot' },
+            ];
+        }
+
+        if (isAdmin) {
+            return [
+                { key: 'запись', label: 'Записать', icon: require('../assets/record.png'), target: 'RecordPage' },
+                { key: 'список', label: 'Список', icon: require('../assets/list.png'), target: 'HomeList' },
+                { key: 'дашборд', label: 'Дэшборд', icon: require('../assets/favorites.png'), target: 'HomeDashboard' },
+                { key: 'пользователи', label: 'Пользователи', icon: require('../assets/profile.png'), target: 'AdminUsers' },
+            ];
+        }
+
+        return [
+            { key: 'запись', label: 'Записать', icon: require('../assets/record.png'), target: 'RecordPage' },
+            { key: 'список', label: 'Список', icon: require('../assets/list.png'), target: 'HomeList' },
+            { key: 'дашборд', label: 'Дэшборд', icon: require('../assets/favorites.png'), target: 'HomeDashboard' },
+        ];
+    }, [isPatient, isAdmin]);
+
+    const activeSubOption = useMemo(() => {
+        const active = subMenuOptions.find((opt) => opt.target === focusedRouteName);
+        return active?.label || '';
+    }, [focusedRouteName, subMenuOptions]);
 
     const toggleMenu = (shouldOpen) => {
         if (shouldOpen) {
@@ -62,19 +98,13 @@ function CustomTabBar({ state, navigation }) {
         }
     };
 
-    const handleSubMenuPress = (action) => {
-
+    const handleSubMenuPress = (option) => {
         toggleMenu(false);
-
-        if (action === 'Записать') {
-            navigation.navigate('Главная', { screen: 'HomeRecord' });
-        } else if (action === 'Список') {
-            navigation.navigate('Главная', { screen: 'HomeList' });
-        } else if (action === 'Дэшборд') {
-            navigation.navigate('Главная', { screen: 'HomeDashboard' });
-        } else {
-            Alert.alert(`Раздел ${action}`, "Этот экран в разработке");
+        if (!option?.target) {
+            Alert.alert(`Раздел ${option?.label || ''}`, 'Этот экран в разработке');
+            return;
         }
+        navigation.navigate('Главная', { screen: option.target });
     };
 
     const menuStyle = {
@@ -91,52 +121,31 @@ function CustomTabBar({ state, navigation }) {
 
     return (
         <View style={tabStyles.tabBarWrapper}>
-            {/* Оверлей */}
             {isMenuOpen && (
                 <Animated.View style={[tabStyles.overlay, { opacity: animation }]}>
                     <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => toggleMenu(false)} />
                 </Animated.View>
             )}
 
-            {/* ПОДМЕНЮ */}
             {isMenuOpen && (
                 <Animated.View style={[tabStyles.subMenuContainer, menuStyle]}>
                     <LinearGradient
                         colors={['#5eead4', '#2ec4b6']}
                         style={tabStyles.gradientBackground}
                     >
-                        <TouchableOpacity
-                            style={[
-                                tabStyles.subMenuItem,
-                                (activeSubOption === 'Записать') && tabStyles.activeBackground
-                            ]}
-                            onPress={() => handleSubMenuPress('Записать')}
-                        >
-                            <Image source={require('../assets/record.png')} style={tabStyles.subMenuIcon} />
-                            <Text style={tabStyles.subMenuText}>Записать</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[
-                                tabStyles.subMenuItem,
-                                (activeSubOption === 'Список') && tabStyles.activeBackground
-                            ]}
-                            onPress={() => handleSubMenuPress('Список')}
-                        >
-                            <Image source={require('../assets/list.png')} style={tabStyles.subMenuIcon} />
-                            <Text style={tabStyles.subMenuText}>Список</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[
-                                tabStyles.subMenuItem,
-                                (activeSubOption === 'Дэшборд') && tabStyles.activeBackground
-                            ]}
-                            onPress={() => handleSubMenuPress('Дэшборд')}
-                        >
-                            <Image source={require('../assets/favorites.png')} style={tabStyles.subMenuIcon} />
-                            <Text style={tabStyles.subMenuText}>Дэшборд</Text>
-                        </TouchableOpacity>
+                        {subMenuOptions.map((option) => (
+                            <TouchableOpacity
+                                key={option.key}
+                                style={[
+                                    tabStyles.subMenuItem,
+                                    activeSubOption === option.label && tabStyles.activeBackground,
+                                ]}
+                                onPress={() => handleSubMenuPress(option)}
+                            >
+                                <Image source={option.icon} style={tabStyles.subMenuIcon} />
+                                <Text style={tabStyles.subMenuText}>{option.label}</Text>
+                            </TouchableOpacity>
+                        ))}
                     </LinearGradient>
                 </Animated.View>
             )}
@@ -151,15 +160,19 @@ function CustomTabBar({ state, navigation }) {
                     {state.routes.map((route, index) => {
                         const isFocused = state.index === index;
                         const isMainButton = route.name === 'Главная';
-
                         const showActiveBg = (isMainButton && isMenuOpen) || (isFocused && !isMenuOpen);
 
-                        let imageSource;
-                        if (route.name === 'Главная') imageSource = require('../assets/home.png');
-                        else if (route.name === 'Пациенты') imageSource = require('../assets/template.png');
-                        else if (route.name === 'Архив') imageSource = require('../assets/archive.png');
+                        let imageSource = require('../assets/home.png');
+                        if (route.name === 'Пациенты') imageSource = require('../assets/template.png');
+                        else if (route.name === 'Консультации' || route.name === 'Архив') imageSource = require('../assets/archive.png');
+                        else if (route.name === 'Чат-бот') imageSource = require('../assets/template.png');
                         else if (route.name === 'Профиль') imageSource = require('../assets/profile.png');
                         else if (route.name === 'Настройки') imageSource = require('../assets/settings.png');
+                        else if (route.name === 'Уведомления') imageSource = require('../assets/template.png');
+                        else if (route.name === 'Расписание') imageSource = require('../assets/list.png');
+                        else if (route.name === 'Шаблоны') imageSource = require('../assets/template.png');
+                        else if (route.name === 'Пользователи') imageSource = require('../assets/profile.png');
+                        else if (route.name === 'Аудит') imageSource = require('../assets/list.png');
 
                         return (
                             <TouchableOpacity
@@ -189,16 +202,59 @@ function CustomTabBar({ state, navigation }) {
 }
 
 export default function TabNavigator() {
+    const [role, setRole] = useState('doctor');
+
+    useEffect(() => {
+        let alive = true;
+        apiFetch('/me/')
+            .then(safeJson)
+            .then((data) => {
+                if (!alive) return;
+                setRole(data?.role || 'doctor');
+            })
+            .catch(() => {
+                if (!alive) return;
+                setRole('doctor');
+            });
+
+        return () => {
+            alive = false;
+        };
+    }, []);
+
+    const isPatient = role === 'patient';
+    const isAdmin = role === 'admin';
+
     return (
         <Tab.Navigator
-            tabBar={props => <CustomTabBar {...props} />}
+            tabBar={(props) => <CustomTabBar {...props} role={role} />}
             screenOptions={{ headerShown: false, animation: 'fade' }}
         >
             <Tab.Screen name="Главная" component={HomeStackNavigator} />
-            <Tab.Screen name="Пациенты" component={PatientsScreen} />
-            <Tab.Screen name="Архив" component={ArchiveScreen} />
-            <Tab.Screen name="Профиль" component={ProfileScreen} />
-            <Tab.Screen name="Настройки" component={SettingsScreen} />
+            {isPatient ? (
+                <>
+                    <Tab.Screen name="Консультации" component={ArchiveScreen} />
+                    <Tab.Screen name="Чат-бот" component={ChatBotScreen} />
+                    <Tab.Screen name="Уведомления" component={NotificationsScreen} />
+                    <Tab.Screen name="Профиль" component={ProfileScreen} />
+                </>
+            ) : isAdmin ? (
+                <>
+                    <Tab.Screen name="Пациенты" component={PatientsScreen} />
+                    <Tab.Screen name="Архив" component={ArchiveScreen} />
+                    <Tab.Screen name="Пользователи" component={UsersScreen} />
+                    <Tab.Screen name="Аудит" component={AuditLogScreen} />
+                    <Tab.Screen name="Настройки" component={SettingsScreen} />
+                </>
+            ) : (
+                <>
+                    <Tab.Screen name="Пациенты" component={PatientsScreen} />
+                    <Tab.Screen name="Архив" component={ArchiveScreen} />
+                    <Tab.Screen name="Расписание" component={AppointmentsScreen} />
+                    <Tab.Screen name="Профиль" component={ProfileScreen} />
+                    <Tab.Screen name="Настройки" component={SettingsScreen} />
+                </>
+            )}
         </Tab.Navigator>
     );
 }
