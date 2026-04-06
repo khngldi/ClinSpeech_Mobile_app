@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialIcons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { apiFetch, safeJson } from '../api';
+import { useLocale } from '../i18n/LocaleContext';
 
 const PRIMARY_COLOR = '#2ec4b6';
 const { height: windowHeight } = Dimensions.get('window');
@@ -40,7 +41,8 @@ const Accordion = ({ title, children, isOpenDefault = false }) => {
 };
 
 export default function DetailScreen({ navigation, route }) {
-    const statusLabel = { created: 'Создано', processing: 'Обработка', generating: 'Генерация', ready: 'Готово', error: 'Ошибка' };
+    const { t } = useLocale();
+    const statusLabel = { created: t('Создано'), processing: t('Обработка'), generating: t('Генерация'), ready: t('Готово'), error: t('Ошибка') };
     const statusColor = { created: '#B0B0B0', processing: '#F1C40F', generating: '#F39C12', ready: '#32CD32', error: '#E74C3C' };
     const waveHeights = [10, 20, 15, 30, 40, 25, 50, 70, 45, 80, 50, 90, 60, 40, 75, 50, 30, 45, 20, 15, 10];
 
@@ -91,19 +93,19 @@ export default function DetailScreen({ navigation, route }) {
         try {
             const res = await apiFetch(`/consultations/${consultationId}/start_processing/`, { method: 'POST' });
             const json = await safeJson(res);
-            if (!res.ok) { Alert.alert('Ошибка', json.error || 'Ошибка запуска'); return; }
+            if (!res.ok) { Alert.alert(t('Ошибка'), json.error || t('Ошибка')); return; }
             await load();
-        } catch (err) { Alert.alert('Ошибка', 'Ошибка запуска обработки'); }
+        } catch (err) { Alert.alert(t('Ошибка'), t('Ошибка')); }
     };
 
     const handleRegenerate = async () => {
-        Alert.alert('Перегенерация', 'Перегенерировать отчёт? Текущий будет сохранён в истории.', [
-            { text: 'Отмена', style: 'cancel' },
-            { text: 'Да', onPress: async () => {
+        Alert.alert(t('Регенерировать'), t('Регенерировать') + '?', [
+            { text: t('Отмена'), style: 'cancel' },
+            { text: t('Да'), onPress: async () => {
                 try {
                     await apiFetch(`/consultations/${consultationId}/regenerate/`, { method: 'POST' });
                     await load();
-                } catch { Alert.alert('Ошибка', 'Ошибка перегенерации'); }
+                } catch { Alert.alert(t('Ошибка'), t('Ошибка')); }
             }},
         ]);
     };
@@ -114,18 +116,18 @@ export default function DetailScreen({ navigation, route }) {
                 method: 'POST',
                 body: JSON.stringify(editForm),
             });
-            if (!res.ok) { Alert.alert('Ошибка', 'Ошибка сохранения'); return; }
+            if (!res.ok) { Alert.alert(t('Ошибка'), t('Ошибка')); return; }
             await load();
             setEditing(false);
-        } catch { Alert.alert('Ошибка', 'Ошибка сохранения'); }
+        } catch { Alert.alert(t('Ошибка'), t('Ошибка')); }
     };
 
     const handleDownloadPDF = async () => {
         try {
             const res = await apiFetch(`/consultations/${consultationId}/download_pdf/`);
-            if (!res.ok) { Alert.alert('Ошибка', 'Ошибка скачивания PDF'); return; }
-            Alert.alert('PDF', 'PDF-отчёт готов к скачиванию');
-        } catch { Alert.alert('Ошибка', 'Ошибка скачивания PDF'); }
+            if (!res.ok) { Alert.alert(t('Ошибка'), t('Ошибка')); return; }
+            Alert.alert('PDF', t('Скачать PDF'));
+        } catch { Alert.alert(t('Ошибка'), t('Ошибка')); }
     };
 
     if (loading) {
@@ -139,7 +141,7 @@ export default function DetailScreen({ navigation, route }) {
     if (!data) {
         return (
             <View style={[styles.mainWrapper, { justifyContent: 'center', alignItems: 'center' }]}>
-                <Text style={{ fontSize: 16, color: '#999' }}>Консультация не найдена</Text>
+                <Text style={{ fontSize: 16, color: '#999' }}>{t('Нет консультаций')}</Text>
             </View>
         );
     }
@@ -147,7 +149,7 @@ export default function DetailScreen({ navigation, route }) {
     const patient = data.patient_info || {};
     const patientName = patient.last_name
         ? `${patient.last_name} ${patient.first_name || ''} ${patient.middle_name || ''}`
-        : 'Пациент не указан';
+        : t('Пациент не указан');
     const status = data.status || 'ready';
     const formattedDate = data.created_at
         ? new Date(data.created_at).toLocaleString('ru-RU')

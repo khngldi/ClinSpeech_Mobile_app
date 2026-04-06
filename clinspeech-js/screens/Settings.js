@@ -18,6 +18,8 @@ export default function SettingsScreen({ navigation }) {
     const [autoProcess, setAutoProcess] = useState(true);
     const [user, setUser] = useState(null);
 
+    const isPatient = user?.role === 'patient';
+
     useEffect(() => {
         apiFetch('/me/').then(safeJson).then(setUser).catch(() => {});
         AsyncStorage.getItem('setting_notifications').then(v => v !== null && setNotifications(v === 'true'));
@@ -36,10 +38,10 @@ export default function SettingsScreen({ navigation }) {
     const currentLangDisplay = locale === 'kk' ? 'KZ' : 'RUS';
 
     const handleLogout = () => {
-        Alert.alert(t('Выйти из аккаунта?', 'Выйти из аккаунта?'), '', [
-            { text: t('Отмена', 'Отмена'), style: 'cancel' },
+        Alert.alert(t('settings.logoutConfirm', 'Выйти из аккаунта?'), '', [
+            { text: t('common.cancel', 'Отмена'), style: 'cancel' },
             {
-                text: t('Выйти', 'Выйти'), style: 'destructive',
+                text: t('settings.logout', 'Выйти'), style: 'destructive',
                 onPress: async () => {
                     try {
                         const refresh = await AsyncStorage.getItem('refresh_token');
@@ -85,15 +87,15 @@ export default function SettingsScreen({ navigation }) {
                     <TouchableOpacity onPress={() => navigation.goBack()}>
                         <Ionicons name="chevron-back" size={28} color="#333" />
                     </TouchableOpacity>
-                    <Text style={s.headerTitle}>{t('Настройки', 'Настройки')}</Text>
+                    <Text style={s.headerTitle}>{t('settings.title', 'Настройки')}</Text>
                     <View style={{ width: 28 }} />
                 </View>
 
                 <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-                    <Section title={t('Общие', 'Общие')}>
+                    <Section title={t('settings.general', 'Общие')}>
                         <Row
                             icon="language-outline"
-                            label={t('Язык', 'Язык')}
+                            label={t('settings.language', 'Язык')}
                             right={
                                 <View style={s.langSwitch}>
                                     {['RUS', 'KZ'].map(l => (
@@ -110,7 +112,7 @@ export default function SettingsScreen({ navigation }) {
                         />
                         <Row
                             icon="notifications-outline"
-                            label={t('Уведомления', 'Уведомления')}
+                            label={t('settings.notifications', 'Уведомления')}
                             right={
                                 <Switch
                                     value={notifications}
@@ -119,31 +121,34 @@ export default function SettingsScreen({ navigation }) {
                                 />
                             }
                         />
-                        <Row
-                            icon="flash-outline"
-                            iconColor="#F59E0B"
-                            label={t('Авто-обработка ИИ', 'Авто-обработка ИИ')}
-                            right={
-                                <Switch
-                                    value={autoProcess}
-                                    onValueChange={v => { setAutoProcess(v); saveSetting('setting_autoprocess', v); }}
-                                    trackColor={{ true: PRIMARY }}
-                                />
-                            }
-                        />
+                        {/* Авто-обработка ИИ только для врачей и админов */}
+                        {!isPatient && (
+                            <Row
+                                icon="flash-outline"
+                                iconColor="#F59E0B"
+                                label={t('settings.autoProcess', 'Авто-обработка ИИ')}
+                                right={
+                                    <Switch
+                                        value={autoProcess}
+                                        onValueChange={v => { setAutoProcess(v); saveSetting('setting_autoprocess', v); }}
+                                        trackColor={{ true: PRIMARY }}
+                                    />
+                                }
+                            />
+                        )}
                     </Section>
 
-                    <Section title={t('О приложении', 'О приложении')}>
+                    <Section title={t('settings.about', 'О приложении')}>
                         <Row
                             icon="information-circle-outline"
                             iconColor="#3B82F6"
-                            label={t('Версия', 'Версия')}
+                            label={t('settings.version', 'Версия')}
                             right={<Text style={s.versionText}>1.1.0</Text>}
                         />
                         <Row
                             icon="help-circle-outline"
                             iconColor="#22C55E"
-                            label={t('Поддержка', 'Поддержка')}
+                            label={t('settings.support', 'Поддержка')}
                             right={<Ionicons name="chevron-forward" size={18} color="#ccc" />}
                             onPress={() => Linking.openURL('mailto:support@clinspeech.kz')}
                         />
@@ -151,12 +156,12 @@ export default function SettingsScreen({ navigation }) {
 
                     <TouchableOpacity style={s.logoutBtn} onPress={handleLogout}>
                         <Ionicons name="log-out-outline" size={18} color="#EF4444" />
-                        <Text style={s.logoutText}>{t('Выйти из аккаунта', 'Выйти из аккаунта')}</Text>
+                        <Text style={s.logoutText}>{t('settings.logoutButton', 'Выйти из аккаунта')}</Text>
                     </TouchableOpacity>
 
                     {user && (
                         <Text style={s.userInfo}>
-                            {user.email} · {user.role}
+                            {user.email} · {user.role === 'patient' ? t('roles.patient', 'Пациент') : user.role === 'doctor' ? t('roles.doctor', 'Врач') : t('roles.admin', 'Админ')}
                         </Text>
                     )}
                 </ScrollView>

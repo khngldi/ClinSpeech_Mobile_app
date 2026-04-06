@@ -8,11 +8,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiFetch, safeJson, BASE_URL } from '../api';
+import { useLocale } from '../i18n/LocaleContext';
 
 const PRIMARY = '#2ec4b6';
-const ROLE_LABELS = { admin: 'Администратор', doctor: 'Врач', patient: 'Пациент' };
 
 export default function ProfileScreen({ navigation }) {
+  const { t } = useLocale();
+  const ROLE_LABELS = { admin: t('Администратор'), doctor: t('Врач'), patient: t('Пациент') };
+
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -52,11 +55,11 @@ export default function ProfileScreen({ navigation }) {
       });
       if (!res.ok) {
         const d = await safeJson(res);
-        throw new Error(typeof d === 'object' ? Object.values(d).flat().join('; ') : 'Ошибка');
+        throw new Error(typeof d === 'object' ? Object.values(d).flat().join('; ') : t('Ошибка'));
       }
       await loadProfile();
       setEditing(false);
-      setSuccess('Профиль обновлён');
+      setSuccess(t('Профиль обновлён'));
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err.message);
@@ -66,11 +69,11 @@ export default function ProfileScreen({ navigation }) {
   const handleChangePassword = async () => {
     setError(''); setSuccess('');
     if (pwdForm.new_password !== pwdForm.new_password2) {
-      setError('Пароли не совпадают');
+      setError(t('Пароли не совпадают'));
       return;
     }
     if (pwdForm.new_password.length < 8) {
-      setError('Минимум 8 символов');
+      setError(t('Минимум 8 символов'));
       return;
     }
     setSaving(true);
@@ -84,11 +87,11 @@ export default function ProfileScreen({ navigation }) {
       });
       if (!res.ok) {
         const d = await safeJson(res);
-        throw new Error(typeof d === 'object' ? Object.values(d).flat().join('; ') : 'Неверный текущий пароль');
+        throw new Error(typeof d === 'object' ? Object.values(d).flat().join('; ') : t('Неверный текущий пароль'));
       }
       setShowPwd(false);
       setPwdForm({ old_password: '', new_password: '', new_password2: '' });
-      setSuccess('Пароль изменён');
+      setSuccess(t('Пароль изменён'));
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err.message);
@@ -96,10 +99,10 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const handleLogout = () => {
-    Alert.alert('Выйти из аккаунта?', 'Завершить текущую сессию', [
-      { text: 'Отмена', style: 'cancel' },
+    Alert.alert(t('Выйти из аккаунта?'), t('Завершить текущую сессию'), [
+      { text: t('Отмена'), style: 'cancel' },
       {
-        text: 'Выйти', style: 'destructive',
+        text: t('Выйти'), style: 'destructive',
         onPress: async () => {
           try {
             const refresh = await AsyncStorage.getItem('refresh_token');
@@ -126,7 +129,7 @@ export default function ProfileScreen({ navigation }) {
   return (
     <SafeAreaView style={s.container}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={s.pageTitle}>Профиль</Text>
+        <Text style={s.pageTitle}>{t('Профиль')}</Text>
 
         {success ? (
           <View style={s.successBanner}>
@@ -163,13 +166,14 @@ export default function ProfileScreen({ navigation }) {
             <>
               <View style={s.infoGrid}>
                 {[
-                  { label: 'Фамилия', val: profile?.last_name },
-                  { label: 'Имя', val: profile?.first_name },
-                  { label: 'Отчество', val: profile?.middle_name || '—' },
-                  { label: 'Телефон', val: profile?.phone || '—' },
-                  { label: 'Email', val: profile?.email },
-                  { label: 'Организация', val: profile?.organization_name || '—' },
-                  ...(profile?.role === 'doctor' ? [{ label: 'Специализация', val: profile?.specialization || '—' }] : []),
+                  { label: t('Фамилия'), val: profile?.last_name },
+                  { label: t('Имя'), val: profile?.first_name },
+                  { label: t('Отчество'), val: profile?.middle_name || '—' },
+                  { label: t('Телефон'), val: profile?.phone || '—' },
+                  { label: t('Email'), val: profile?.email },
+                  // Организация только для врачей и админов (не для пациентов)
+                  ...(profile?.role !== 'patient' ? [{ label: t('Организация'), val: profile?.organization_name || '—' }] : []),
+                  ...(profile?.role === 'doctor' ? [{ label: t('Специализация'), val: profile?.specialization || '—' }] : []),
                 ].map(({ label, val }) => (
                   <View key={label} style={s.infoItem}>
                     <Text style={s.infoLabel}>{label}</Text>
@@ -180,36 +184,36 @@ export default function ProfileScreen({ navigation }) {
               <View style={s.btnRow}>
                 <TouchableOpacity style={s.primaryBtn} onPress={() => { setEditing(true); setError(''); }}>
                   <Ionicons name="create-outline" size={16} color="#fff" />
-                  <Text style={s.primaryBtnText}>Редактировать</Text>
+                  <Text style={s.primaryBtnText}>{t('Редактировать')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={s.secondaryBtn} onPress={() => setShowPwd(true)}>
                   <Ionicons name="lock-closed-outline" size={16} color={PRIMARY} />
-                  <Text style={s.secondaryBtnText}>Сменить пароль</Text>
+                  <Text style={s.secondaryBtnText}>{t('Сменить пароль')}</Text>
                 </TouchableOpacity>
               </View>
             </>
           ) : (
             <View style={{ marginTop: 16 }}>
-              <Text style={s.label}>Фамилия</Text>
+              <Text style={s.label}>{t('Фамилия')}</Text>
               <TextInput style={s.input} value={form.last_name} onChangeText={v => setForm({...form, last_name: v})} />
-              <Text style={s.label}>Имя</Text>
+              <Text style={s.label}>{t('Имя')}</Text>
               <TextInput style={s.input} value={form.first_name} onChangeText={v => setForm({...form, first_name: v})} />
-              <Text style={s.label}>Отчество</Text>
+              <Text style={s.label}>{t('Отчество')}</Text>
               <TextInput style={s.input} value={form.middle_name} onChangeText={v => setForm({...form, middle_name: v})} />
-              <Text style={s.label}>Телефон</Text>
+              <Text style={s.label}>{t('Телефон')}</Text>
               <TextInput style={s.input} value={form.phone} onChangeText={v => setForm({...form, phone: v})} keyboardType="phone-pad" />
               {profile?.role === 'doctor' && (
                 <>
-                  <Text style={s.label}>Специализация</Text>
+                  <Text style={s.label}>{t('Специализация')}</Text>
                   <TextInput style={s.input} value={form.specialization} onChangeText={v => setForm({...form, specialization: v})} placeholder="Терапевт, Кардиолог..." placeholderTextColor="#bbb" />
                 </>
               )}
               <View style={s.btnRow}>
                 <TouchableOpacity style={[s.primaryBtn, saving && { opacity: 0.6 }]} onPress={handleUpdate} disabled={saving}>
-                  {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.primaryBtnText}>Сохранить</Text>}
+                  {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.primaryBtnText}>{t('Сохранить')}</Text>}
                 </TouchableOpacity>
                 <TouchableOpacity style={s.secondaryBtn} onPress={() => { setEditing(false); setError(''); }}>
-                  <Text style={s.secondaryBtnText}>Отмена</Text>
+                  <Text style={s.secondaryBtnText}>{t('Отмена')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -220,12 +224,12 @@ export default function ProfileScreen({ navigation }) {
         <View style={s.card}>
           <View style={s.logoutRow}>
             <View>
-              <Text style={s.logoutTitle}>Выход из системы</Text>
-              <Text style={s.logoutSub}>Завершить текущую сессию</Text>
+              <Text style={s.logoutTitle}>{t('Выход из системы')}</Text>
+              <Text style={s.logoutSub}>{t('Завершить текущую сессию')}</Text>
             </View>
             <TouchableOpacity style={s.logoutBtn} onPress={handleLogout}>
               <Ionicons name="log-out-outline" size={18} color="#EF4444" />
-              <Text style={s.logoutBtnText}>Выйти</Text>
+              <Text style={s.logoutBtnText}>{t('Выйти')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -236,26 +240,26 @@ export default function ProfileScreen({ navigation }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.modalOverlay}>
           <View style={s.modal}>
             <View style={s.modalHeader}>
-              <Text style={s.modalTitle}>Смена пароля</Text>
+              <Text style={s.modalTitle}>{t('Смена пароля')}</Text>
               <TouchableOpacity onPress={() => { setShowPwd(false); setError(''); }}>
                 <Ionicons name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
             <View style={s.modalBody}>
               {error ? <View style={s.errorBanner}><Text style={s.errorText}>{error}</Text></View> : null}
-              <Text style={s.label}>Текущий пароль *</Text>
+              <Text style={s.label}>{t('Текущий пароль')} *</Text>
               <TextInput style={s.input} secureTextEntry value={pwdForm.old_password} onChangeText={v => setPwdForm({...pwdForm, old_password: v})} />
-              <Text style={s.label}>Новый пароль *</Text>
+              <Text style={s.label}>{t('Новый пароль')} *</Text>
               <TextInput style={s.input} secureTextEntry value={pwdForm.new_password} onChangeText={v => setPwdForm({...pwdForm, new_password: v})} />
-              <Text style={s.label}>Подтвердите новый пароль *</Text>
+              <Text style={s.label}>{t('Подтвердите новый пароль')} *</Text>
               <TextInput style={s.input} secureTextEntry value={pwdForm.new_password2} onChangeText={v => setPwdForm({...pwdForm, new_password2: v})} />
             </View>
             <View style={s.modalFooter}>
               <TouchableOpacity style={s.cancelBtn} onPress={() => { setShowPwd(false); setError(''); }}>
-                <Text style={s.cancelBtnText}>Отмена</Text>
+                <Text style={s.cancelBtnText}>{t('Отмена')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.primaryBtn, saving && { opacity: 0.6 }]} onPress={handleChangePassword} disabled={saving}>
-                {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.primaryBtnText}>Сменить</Text>}
+                {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.primaryBtnText}>{t('Сменить')}</Text>}
               </TouchableOpacity>
             </View>
           </View>

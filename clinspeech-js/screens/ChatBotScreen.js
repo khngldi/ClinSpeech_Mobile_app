@@ -14,17 +14,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 import { apiFetch, safeJson } from '../api';
+import { useLocale } from '../i18n/LocaleContext';
 
 const MINT = '#2ec4b6';
 
-const QUICK_PROMPTS = [
-    'Расшифруй анализ крови',
-    'Что означают рекомендации врача?',
-    'Покажи мою историю консультаций',
-    'Есть ли противопоказания у лекарства?',
-];
-
 export default function ChatBotScreen() {
+    const { t } = useLocale();
+    const QUICK_PROMPTS = [
+        t('Как получить консультацию?'),
+        t('Где мои результаты?'),
+        t('Как изменить приём?'),
+    ];
+
     const [draft, setDraft] = useState('');
     const [messages, setMessages] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -46,7 +47,7 @@ export default function ChatBotScreen() {
             setMessages([{
                 id: 'bot-welcome',
                 is_user: false,
-                message: 'Здравствуйте! Я AI-ассистент пациента. Задайте вопрос о вашем здоровье, анализах или рекомендациях врача.',
+                message: t('Задайте вопрос или выберите быстрый вопрос'),
             }]);
         } finally {
             setInitialLoading(false);
@@ -96,7 +97,7 @@ export default function ChatBotScreen() {
             setMessages((prev) => [...prev, {
                 id: `bot-error-${Date.now()}`,
                 is_user: false,
-                message: 'Извините, произошла ошибка. Попробуйте позже или обратитесь к врачу.',
+                message: t('Ошибка'),
             }]);
         } finally {
             setLoading(false);
@@ -119,7 +120,7 @@ export default function ChatBotScreen() {
                 <SafeAreaView style={s.safeArea}>
                     <View style={s.loadingContainer}>
                         <ActivityIndicator size="large" color={MINT} />
-                        <Text style={s.loadingText}>Загрузка чата...</Text>
+                        <Text style={s.loadingText}>{t('Загрузка')}...</Text>
                     </View>
                 </SafeAreaView>
             </View>
@@ -136,14 +137,14 @@ export default function ChatBotScreen() {
                 >
                     <View style={s.header}>
                         <View style={s.headerTop}>
-                            <Text style={s.title}>AI Ассистент</Text>
+                            <Text style={s.title}>{t('AI Ассистент')}</Text>
                             {messages.length > 0 && (
                                 <TouchableOpacity onPress={clearChat} style={s.clearBtn}>
-                                    <Text style={s.clearBtnText}>Очистить</Text>
+                                    <Text style={s.clearBtnText}>{t('Очистить чат')}</Text>
                                 </TouchableOpacity>
                             )}
                         </View>
-                        <Text style={s.subtitle}>Персональный диалог о здоровье и рекомендациях</Text>
+                        <Text style={s.subtitle}>{t('Задайте вопрос или выберите быстрый вопрос')}</Text>
                     </View>
 
                     <View style={s.quickRow}>

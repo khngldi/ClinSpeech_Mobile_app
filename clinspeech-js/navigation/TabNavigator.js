@@ -5,6 +5,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { apiFetch, safeJson } from '../api';
+import { useLocale } from '../i18n/LocaleContext';
 
 import HomeScreen from '../screens/HomeScreen';
 import ListScreen from '../screens/ListScreen';
@@ -22,9 +23,35 @@ import UsersScreen from '../screens/admin/UsersScreen';
 import AuditLogScreen from '../screens/admin/AuditLogScreen';
 import { tabStyles } from '../styles/TabStyles';
 
+// Словарь переводов для названий вкладок
+const TAB_TRANSLATIONS = {
+    'Главная': { ru: 'Главная', kk: 'Басты бет' },
+    'Пациенты': { ru: 'Пациенты', kk: 'Пациенттер' },
+    'Архив': { ru: 'Архив', kk: 'Мұрағат' },
+    'Профиль': { ru: 'Профиль', kk: 'Профиль' },
+    'Настройки': { ru: 'Настройки', kk: 'Баптаулар' },
+    'Консультации': { ru: 'Консультации', kk: 'Консультация' },
+    'Чат-бот': { ru: 'Чат-бот', kk: 'Чат-бот' },
+    'Уведомления': { ru: 'Уведомления', kk: 'Хабарлама' },
+    'Расписание': { ru: 'Расписание', kk: 'Кесте' },
+    'Пользователи': { ru: 'Пользователи', kk: 'Қолданушы' },
+    'Аудит': { ru: 'Аудит', kk: 'Аудит' },
+};
+
+// Переводы для подменю
+const SUBMENU_TRANSLATIONS = {
+    'Записать': { ru: 'Записать', kk: 'Жазу' },
+    'Список': { ru: 'Список', kk: 'Тізім' },
+    'Дэшборд': { ru: 'Дэшборд', kk: 'Бақылау' },
+    'Пользователи': { ru: 'Пользователи', kk: 'Қолданушы' },
+    'Чат-бот': { ru: 'Чат-бот', kk: 'Чат-бот' },
+};
+
 const Tab = createBottomTabNavigator();
 const HomeStack = createStackNavigator();
+const PatientHomeStack = createStackNavigator();
 
+// HomeStack для врачей и админов
 function HomeStackNavigator() {
     return (
         <HomeStack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
@@ -39,23 +66,42 @@ function HomeStackNavigator() {
     );
 }
 
-function CustomTabBar({ state, navigation, role }) {
+// HomeStack для пациентов - сразу Dashboard (без записи консультаций)
+function PatientHomeStackNavigator() {
+    return (
+        <PatientHomeStack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
+            <PatientHomeStack.Screen name="PatientDashboard" component={DashboardScreen} />
+            <PatientHomeStack.Screen name="PatientList" component={ListScreen} />
+        </PatientHomeStack.Navigator>
+    );
+}
+
+function CustomTabBar({ state, navigation, role, locale }) {
     const isPatient = role === 'patient';
     const isAdmin = role === 'admin';
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const animation = useRef(new Animated.Value(0)).current;
 
+    // Функция перевода для вкладок
+    const translateTab = (name) => {
+        const trans = TAB_TRANSLATIONS[name];
+        return trans ? trans[locale] || trans.ru : name;
+    };
+
+    // Функция перевода для подменю
+    const translateSubmenu = (label) => {
+        const trans = SUBMENU_TRANSLATIONS[label];
+        return trans ? trans[locale] || trans.ru : label;
+    };
+
     const currentRoute = state.routes[state.index];
     const isMainTabFocused = currentRoute.name === 'Главная';
     const focusedRouteName = getFocusedRouteNameFromRoute(currentRoute) ?? 'HomeRecord';
 
+    // Пациенты не имеют подменю - у них нет "Записать"
     const subMenuOptions = useMemo(() => {
         if (isPatient) {
-            return [
-                { key: 'дашборд', label: 'Дэшборд', icon: require('../assets/favorites.png'), target: 'HomeDashboard' },
-                { key: 'список', label: 'Список', icon: require('../assets/list.png'), target: 'HomeList' },
-                { key: 'чат', label: 'Чат-бот', icon: require('../assets/template.png'), target: 'HomeChatBot' },
-            ];
+            return []; // Пустой массив - нет подменю для пациентов
         }
 
         if (isAdmin) {
@@ -80,6 +126,9 @@ function CustomTabBar({ state, navigation, role }) {
     }, [focusedRouteName, subMenuOptions]);
 
     const toggleMenu = (shouldOpen) => {
+        // Пациенты не могут открывать подменю
+        if (isPatient) return;
+        
         if (shouldOpen) {
             setIsMenuOpen(true);
             Animated.timing(animation, {
@@ -121,13 +170,14 @@ function CustomTabBar({ state, navigation, role }) {
 
     return (
         <View style={tabStyles.tabBarWrapper}>
-            {isMenuOpen && (
+            {/* Подменю только для врачей и админов */}
+            {!isPatient && isMenuOpen && (
                 <Animated.View style={[tabStyles.overlay, { opacity: animation }]}>
                     <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => toggleMenu(false)} />
                 </Animated.View>
             )}
 
-            {isMenuOpen && (
+            {!isPatient && isMenuOpen && (
                 <Animated.View style={[tabStyles.subMenuContainer, menuStyle]}>
                     <LinearGradient
                         colors={['#5eead4', '#2ec4b6']}
@@ -143,7 +193,7 @@ function CustomTabBar({ state, navigation, role }) {
                                 onPress={() => handleSubMenuPress(option)}
                             >
                                 <Image source={option.icon} style={tabStyles.subMenuIcon} />
-                                <Text style={tabStyles.subMenuText}>{option.label}</Text>
+                                <Text style={tabStyles.subMenuText}>{translateSubmenu(option.label)}</Text>
                             </TouchableOpacity>
                         ))}
                     </LinearGradient>
@@ -160,7 +210,7 @@ function CustomTabBar({ state, navigation, role }) {
                     {state.routes.map((route, index) => {
                         const isFocused = state.index === index;
                         const isMainButton = route.name === 'Главная';
-                        const showActiveBg = (isMainButton && isMenuOpen) || (isFocused && !isMenuOpen);
+                        const showActiveBg = (!isPatient && isMainButton && isMenuOpen) || (isFocused && !isMenuOpen);
 
                         let imageSource = require('../assets/home.png');
                         if (route.name === 'Пациенты') imageSource = require('../assets/template.png');
@@ -180,7 +230,8 @@ function CustomTabBar({ state, navigation, role }) {
                                 style={tabStyles.tabItem}
                                 activeOpacity={1}
                                 onPress={() => {
-                                    if (isMainButton) {
+                                    if (isMainButton && !isPatient) {
+                                        // Подменю только для врачей/админов
                                         toggleMenu(!isMenuOpen);
                                     } else {
                                         toggleMenu(false);
@@ -190,7 +241,7 @@ function CustomTabBar({ state, navigation, role }) {
                             >
                                 <View style={[tabStyles.iconContainer, showActiveBg && tabStyles.activeBackground]}>
                                     <Image source={imageSource} style={tabStyles.mainIcon} />
-                                    <Text style={tabStyles.label}>{route.name}</Text>
+                                    <Text style={tabStyles.label}>{translateTab(route.name)}</Text>
                                 </View>
                             </TouchableOpacity>
                         );
@@ -203,6 +254,7 @@ function CustomTabBar({ state, navigation, role }) {
 
 export default function TabNavigator() {
     const [role, setRole] = useState('doctor');
+    const { locale } = useLocale();
 
     useEffect(() => {
         let alive = true;
@@ -227,19 +279,20 @@ export default function TabNavigator() {
 
     return (
         <Tab.Navigator
-            tabBar={(props) => <CustomTabBar {...props} role={role} />}
+            tabBar={(props) => <CustomTabBar {...props} role={role} locale={locale} />}
             screenOptions={{ headerShown: false, animation: 'fade' }}
         >
-            <Tab.Screen name="Главная" component={HomeStackNavigator} />
             {isPatient ? (
                 <>
+                    <Tab.Screen name="Главная" component={PatientHomeStackNavigator} />
                     <Tab.Screen name="Консультации" component={ArchiveScreen} />
                     <Tab.Screen name="Чат-бот" component={ChatBotScreen} />
-                    <Tab.Screen name="Уведомления" component={NotificationsScreen} />
                     <Tab.Screen name="Профиль" component={ProfileScreen} />
+                    <Tab.Screen name="Настройки" component={SettingsScreen} />
                 </>
             ) : isAdmin ? (
                 <>
+                    <Tab.Screen name="Главная" component={HomeStackNavigator} />
                     <Tab.Screen name="Пациенты" component={PatientsScreen} />
                     <Tab.Screen name="Архив" component={ArchiveScreen} />
                     <Tab.Screen name="Пользователи" component={UsersScreen} />
@@ -248,6 +301,7 @@ export default function TabNavigator() {
                 </>
             ) : (
                 <>
+                    <Tab.Screen name="Главная" component={HomeStackNavigator} />
                     <Tab.Screen name="Пациенты" component={PatientsScreen} />
                     <Tab.Screen name="Архив" component={ArchiveScreen} />
                     <Tab.Screen name="Расписание" component={AppointmentsScreen} />

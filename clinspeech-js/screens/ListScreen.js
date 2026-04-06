@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { apiFetch, safeJson } from '../api';
+import { useLocale } from '../i18n/LocaleContext';
 
 const MINT = '#2ec4b6';
 const MINT_LIGHT = '#5eead4';
@@ -65,13 +66,6 @@ function FloatingBlob({ color, size, startX, startY, delay }) {
 
 const TAB_HEIGHT = 65;
 
-const statusMap = {
-    pending:    { text: 'Ожидание',  color: '#B0B0B0' },
-    processing: { text: 'Обработка', color: '#F1C40F' },
-    done:       { text: 'Готово',    color: '#2ECC71' },
-    error:      { text: 'Ошибка',    color: '#E74C3C' },
-};
-
 function formatDate(iso) {
     if (!iso) return '';
     const d = new Date(iso);
@@ -79,6 +73,14 @@ function formatDate(iso) {
 }
 
 export default function ListScreen({ navigation }) {
+    const { t } = useLocale();
+    const statusMap = {
+        pending:    { text: t('Ожидание'),  color: '#B0B0B0' },
+        processing: { text: t('Обработка'), color: '#F1C40F' },
+        done:       { text: t('Готово'),    color: '#2ECC71' },
+        error:      { text: t('Ошибка'),    color: '#E74C3C' },
+    };
+
     const [consultations, setConsultations] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -95,7 +97,7 @@ export default function ListScreen({ navigation }) {
         const patient = item.patient_info;
         const patientName = patient
             ? `${patient.last_name || ''} ${(patient.first_name || '')[0] || ''}.`
-            : 'Пациент не указан';
+            : t('Пациент не указан');
 
         return (
             <TouchableOpacity
@@ -131,7 +133,7 @@ export default function ListScreen({ navigation }) {
                 <FloatingBlob color={PURPLE} size={200} startX={20} startY={400} delay={4500} />
                 <FloatingBlob color={MINT_DARK} size={240} startX={SW - 180} startY={500} delay={7000} />
             </View>
-            <Text style={styles.title}>Последние записи</Text>
+            <Text style={styles.title}>{t('Последние записи')}</Text>
 
             {loading ? (
                 <ActivityIndicator size="large" color={MINT} style={{ marginTop: 40 }} />
@@ -143,7 +145,7 @@ export default function ListScreen({ navigation }) {
                         renderItem={renderItem}
                         contentContainerStyle={styles.list}
                         showsVerticalScrollIndicator
-                        ListEmptyComponent={<Text style={styles.emptyText}>Консультаций пока нет</Text>}
+                        ListEmptyComponent={<Text style={styles.emptyText}>{t('Консультаций пока нет')}</Text>}
                     />
                 </View>
             )}

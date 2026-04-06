@@ -6,12 +6,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { apiFetch, safeJson } from '../api';
+import { useLocale } from '../i18n/LocaleContext';
 
 const PRIMARY = '#2ec4b6';
 const STATUS_COLORS = { created: '#9CA3AF', processing: '#3B82F6', generating: '#F59E0B', ready: '#22C55E', error: '#EF4444' };
-const STATUS_LABELS = { created: 'Создано', processing: 'Обработка', generating: 'Генерация', ready: 'Готово', error: 'Ошибка' };
 
 export default function DashboardScreen({ navigation }) {
+  const { t } = useLocale();
+  const STATUS_LABELS = { created: t('Создано'), processing: t('Обработка'), generating: t('Генерация'), ready: t('Готово'), error: t('Ошибка') };
+
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState(null);
   const [recentConsults, setRecentConsults] = useState([]);
@@ -51,7 +54,7 @@ export default function DashboardScreen({ navigation }) {
   );
 
   const isPatient = user?.role === 'patient';
-  const displayName = user?.first_name || user?.full_name || user?.username || 'Доктор';
+  const displayName = user?.first_name || user?.full_name || user?.username || t('Врач');
   const statusData = stats?.consultations_by_status || {};
 
   return (
@@ -60,14 +63,14 @@ export default function DashboardScreen({ navigation }) {
         {/* Header */}
         <View style={s.header}>
           <View style={{ flex: 1 }}>
-            <Text style={s.greeting}>Добро пожаловать,</Text>
+            <Text style={s.greeting}>{t('Добро пожаловать,')}</Text>
             <Text style={s.name}>{displayName}!</Text>
-            <Text style={s.subtitle}>Обзор активности и статистики</Text>
+            <Text style={s.subtitle}>{t('Обзор активности и статистики')}</Text>
           </View>
           {!isPatient && (
             <TouchableOpacity style={s.newBtn} onPress={() => navigation.navigate('RecordPage')}>
               <Ionicons name="mic" size={18} color="#fff" />
-              <Text style={s.newBtnText}>Новый приём</Text>
+              <Text style={s.newBtnText}>{t('Новый приём')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -78,22 +81,22 @@ export default function DashboardScreen({ navigation }) {
             <View style={[s.statCard, { borderLeftColor: PRIMARY }]}>
               <Ionicons name="document-text-outline" size={24} color={PRIMARY} />
               <Text style={s.statValue}>{stats.total_consultations}</Text>
-              <Text style={s.statLabel}>Всего консультаций</Text>
+              <Text style={s.statLabel}>{t('Всего консультаций')}</Text>
             </View>
             <View style={[s.statCard, { borderLeftColor: '#22C55E' }]}>
               <Ionicons name="checkmark-circle-outline" size={24} color="#22C55E" />
               <Text style={s.statValue}>{statusData.ready || 0}</Text>
-              <Text style={s.statLabel}>Завершённых</Text>
+              <Text style={s.statLabel}>{t('Завершённых')}</Text>
             </View>
             <View style={[s.statCard, { borderLeftColor: '#3B82F6' }]}>
               <Ionicons name="calendar-outline" size={24} color="#3B82F6" />
               <Text style={s.statValue}>{stats.consultations_this_month}</Text>
-              <Text style={s.statLabel}>В этом месяце</Text>
+              <Text style={s.statLabel}>{t('В этом месяце')}</Text>
             </View>
             <View style={[s.statCard, { borderLeftColor: '#A855F7' }]}>
               <Ionicons name="people-outline" size={24} color="#A855F7" />
               <Text style={s.statValue}>{stats.total_patients}</Text>
-              <Text style={s.statLabel}>Пациентов</Text>
+              <Text style={s.statLabel}>{t('Пациентов')}</Text>
             </View>
           </View>
         )}
@@ -101,7 +104,7 @@ export default function DashboardScreen({ navigation }) {
         {/* Status breakdown */}
         {!isPatient && stats && Object.keys(statusData).length > 0 && (
           <View style={s.section}>
-            <Text style={s.sectionTitle}>По статусам</Text>
+            <Text style={s.sectionTitle}>{t('По статусам')}</Text>
             <View style={s.statusGrid}>
               {Object.entries(statusData).map(([key, val]) => (
                 <View key={key} style={s.statusItem}>
@@ -118,14 +121,14 @@ export default function DashboardScreen({ navigation }) {
         {/* Recent consultations */}
         <View style={s.section}>
           <View style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>Последние консультации</Text>
+            <Text style={s.sectionTitle}>{t('Последние консультации')}</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Архив')}>
-              <Text style={s.seeAll}>Все →</Text>
+              <Text style={s.seeAll}>{t('Все →')}</Text>
             </TouchableOpacity>
           </View>
           {recentConsults.length === 0 ? (
             <View style={s.emptyCard}>
-              <Text style={s.emptyText}>Нет консультаций</Text>
+              <Text style={s.emptyText}>{t('Нет консультаций')}</Text>
             </View>
           ) : (
             recentConsults.map(c => (
@@ -156,11 +159,11 @@ export default function DashboardScreen({ navigation }) {
         {!isPatient && (
           <View style={s.section}>
             <View style={s.sectionHeader}>
-              <Text style={s.sectionTitle}>Приёмы на сегодня</Text>
+              <Text style={s.sectionTitle}>{t('Приёмы на сегодня')}</Text>
             </View>
             {todayAppts.length === 0 ? (
               <View style={s.emptyCard}>
-                <Text style={s.emptyText}>На сегодня приёмов нет</Text>
+                <Text style={s.emptyText}>{t('На сегодня приёмов нет')}</Text>
               </View>
             ) : (
               todayAppts.map(a => (
@@ -168,7 +171,7 @@ export default function DashboardScreen({ navigation }) {
                   <View style={{ flex: 1 }}>
                     <Text style={s.listItemName}>{a.patient_name}</Text>
                     <Text style={s.listItemMeta}>
-                      {new Date(a.scheduled_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} · {a.reason || 'Приём'}
+                      {new Date(a.scheduled_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} · {a.reason || t('Новый приём')}
                     </Text>
                   </View>
                   <View style={[s.badge, {
@@ -177,7 +180,7 @@ export default function DashboardScreen({ navigation }) {
                     <Text style={[s.badgeText, {
                       color: a.status === 'scheduled' ? '#3B82F6' : a.status === 'completed' ? '#22C55E' : '#9CA3AF',
                     }]}>
-                      {a.status === 'scheduled' ? 'Ожидается' : a.status === 'completed' ? 'Завершён' : a.status}
+                      {a.status === 'scheduled' ? t('Ожидается') : a.status === 'completed' ? t('Завершён') : a.status}
                     </Text>
                   </View>
                 </View>

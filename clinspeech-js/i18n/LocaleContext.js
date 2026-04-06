@@ -41,7 +41,11 @@ export function LocaleProvider({ children }) {
   }, []);
 
   const t = useCallback((key, fallback = key, params = {}) => {
-    const translation = locale === 'kk' ? kkMessages[fallback] ?? kkMessages[key] : undefined;
+    // Сначала ищем по ключу, потом по fallback
+    let translation = undefined;
+    if (locale === 'kk') {
+      translation = kkMessages[key] ?? kkMessages[fallback];
+    }
     const value = translation ?? fallback;
     return interpolate(value, params);
   }, [locale]);

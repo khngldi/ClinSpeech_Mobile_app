@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Image, Animated, Easing, Dimensions, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { apiFetch, safeJson } from '../api';
+import { useLocale } from '../i18n/LocaleContext';
 
 import { homeStyles as styles } from '../styles/HomeStyles';
 
@@ -56,6 +57,7 @@ function FloatingBlob({ color, size, startX, startY, delay }) {
 }
 
 export default function HomeScreen({ navigation }) {
+    const { t } = useLocale();
     const [doctorName, setDoctorName] = useState('');
 
     useEffect(() => {
@@ -83,9 +85,9 @@ export default function HomeScreen({ navigation }) {
             <SafeAreaView style={styles.safeArea}>
 
                 <View style={styles.content}>
-                    <Text style={styles.title}>Добро пожаловать,{'\n'}{doctorName ? `Др. ${doctorName}!` : 'Доктор!'}</Text>
+                    <Text style={styles.title}>{t('Добро пожаловать,')}{'\n'}{doctorName ? `${t('Врач')} ${doctorName}!` : t('Доктор!')}</Text>
                     <Text style={styles.subtitle}>
-                        Начните свой первый{'\n'}прием, чтобы создать отчет
+                        {t('Начните свой первый')}{'\n'}{t('прием, чтобы создать отчет')}
                     </Text>
 
                     <View style={styles.micContainer}>
@@ -100,7 +102,7 @@ export default function HomeScreen({ navigation }) {
                         </TouchableOpacity>
                     </View>
 
-                    <Text style={styles.hintText}>Нажмите, чтобы{'\n'}начать новый прием!</Text>
+                    <Text style={styles.hintText}>{t('Нажмите, чтобы')}{'\n'}{t('начать новый прием!')}</Text>
                 </View>
 
             </SafeAreaView>

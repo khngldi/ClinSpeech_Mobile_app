@@ -7,10 +7,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { apiFetch, safeJson } from '../api';
+import { useLocale } from '../i18n/LocaleContext';
 
 const PRIMARY = '#2ec4b6';
 
 export default function PatientsScreen({ navigation }) {
+  const { t } = useLocale();
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -55,7 +57,7 @@ export default function PatientsScreen({ navigation }) {
 
   const handleCreate = async () => {
     if (!form.last_name || !form.first_name || !form.birth_date) {
-      setError('Заполните обязательные поля');
+      setError(t('Заполните обязательные поля'));
       return;
     }
     setError('');
@@ -67,7 +69,7 @@ export default function PatientsScreen({ navigation }) {
       });
       if (!res.ok) {
         const d = await safeJson(res);
-        throw new Error(typeof d === 'object' ? Object.values(d).flat().join('; ') : 'Ошибка создания');
+        throw new Error(typeof d === 'object' ? Object.values(d).flat().join('; ') : t('Ошибка'));
       }
       setShowCreate(false);
       setForm({ first_name: '', last_name: '', middle_name: '', birth_date: '' });
@@ -78,15 +80,15 @@ export default function PatientsScreen({ navigation }) {
   };
 
   const handleDelete = (id) => {
-    Alert.alert('Удалить пациента?', 'Это действие нельзя отменить', [
-      { text: 'Отмена', style: 'cancel' },
+    Alert.alert(t('Удалить пациента?'), t('Это действие нельзя отменить'), [
+      { text: t('Отмена'), style: 'cancel' },
       {
-        text: 'Удалить', style: 'destructive',
+        text: t('Удалить'), style: 'destructive',
         onPress: async () => {
           try {
             await apiFetch(`/patients/${id}/`, { method: 'DELETE' });
             loadPatients();
-          } catch { Alert.alert('Ошибка', 'Не удалось удалить пациента'); }
+          } catch { Alert.alert(t('Ошибка'), t('Не удалось удалить пациента')); }
         }
       },
     ]);
@@ -102,12 +104,12 @@ export default function PatientsScreen({ navigation }) {
       const res = await apiFetch(`/patients/${patientId}/history/`);
       if (!res.ok) {
         const d = await safeJson(res);
-        throw new Error(d.error || d.detail || `Ошибка ${res.status}`);
+        throw new Error(d.error || d.detail || `${t('Ошибка')} ${res.status}`);
       }
       const data = await safeJson(res);
       setHistory(data);
     } catch (err) {
-      setHistoryError(err.message || 'Не удалось загрузить историю');
+      setHistoryError(err.message || t('Ошибка загрузки'));
     } finally { setHistoryLoading(false); }
   };
 
@@ -121,22 +123,22 @@ export default function PatientsScreen({ navigation }) {
             {item.last_name} {item.first_name} {item.middle_name || ''}
           </Text>
           <Text style={s.patientInfo}>
-            Дата рождения: {item.birth_date || '—'}
+            {t('Дата рождения')}: {item.birth_date || '—'}
           </Text>
           <Text style={s.patientInfo}>
-            Организация: {orgs.find(o => o.id === item.organization)?.name || '—'}
+            {t('Организация')}: {orgs.find(o => o.id === item.organization)?.name || '—'}
           </Text>
         </View>
       </View>
       <View style={s.cardActions}>
         <TouchableOpacity style={s.actionBtn} onPress={() => loadHistory(item.id)}>
           <Ionicons name="time-outline" size={16} color={PRIMARY} />
-          <Text style={s.actionText}>История</Text>
+          <Text style={s.actionText}>{t('История')}</Text>
         </TouchableOpacity>
         {isDoctor && (
           <TouchableOpacity style={[s.actionBtn, { borderColor: '#E74C3C' }]} onPress={() => handleDelete(item.id)}>
             <Ionicons name="trash-outline" size={16} color="#E74C3C" />
-            <Text style={[s.actionText, { color: '#E74C3C' }]}>Удалить</Text>
+            <Text style={[s.actionText, { color: '#E74C3C' }]}>{t('Удалить')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -148,13 +150,13 @@ export default function PatientsScreen({ navigation }) {
       {/* Header */}
       <View style={s.header}>
         <View>
-          <Text style={s.title}>Пациенты</Text>
-          <Text style={s.subtitle}>{patients.length} записей</Text>
+          <Text style={s.title}>{t('Пациенты')}</Text>
+          <Text style={s.subtitle}>{patients.length} {t('записей')}</Text>
         </View>
         {isDoctor && (
           <TouchableOpacity style={s.addBtn} onPress={() => setShowCreate(true)}>
             <Ionicons name="add" size={22} color="#fff" />
-            <Text style={s.addBtnText}>Добавить</Text>
+            <Text style={s.addBtnText}>{t('Добавить')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -164,7 +166,7 @@ export default function PatientsScreen({ navigation }) {
         <Ionicons name="search" size={18} color="#999" />
         <TextInput
           style={s.searchInput}
-          placeholder="Поиск по ФИО..."
+          placeholder={t('Поиск по ФИО...')}
           placeholderTextColor="#999"
           value={search}
           onChangeText={setSearch}
@@ -182,8 +184,8 @@ export default function PatientsScreen({ navigation }) {
       ) : patients.length === 0 ? (
         <View style={s.empty}>
           <Ionicons name="people-outline" size={48} color="#ccc" />
-          <Text style={s.emptyTitle}>Нет пациентов</Text>
-          <Text style={s.emptyText}>Добавьте первого пациента</Text>
+          <Text style={s.emptyTitle}>{t('Нет пациентов')}</Text>
+          <Text style={s.emptyText}>{t('Добавьте первого пациента')}</Text>
         </View>
       ) : (
         <FlatList
@@ -200,28 +202,28 @@ export default function PatientsScreen({ navigation }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.modalOverlay}>
           <View style={s.modal}>
             <View style={s.modalHeader}>
-              <Text style={s.modalTitle}>Новый пациент</Text>
+              <Text style={s.modalTitle}>{t('Новый пациент')}</Text>
               <TouchableOpacity onPress={() => { setShowCreate(false); setError(''); }}>
                 <Ionicons name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
             <ScrollView style={s.modalBody}>
               {error ? <Text style={s.errorText}>{error}</Text> : null}
-              <Text style={s.label}>Фамилия *</Text>
+              <Text style={s.label}>{t('Фамилия')} *</Text>
               <TextInput style={s.input} value={form.last_name} onChangeText={v => setForm({...form, last_name: v})} />
-              <Text style={s.label}>Имя *</Text>
+              <Text style={s.label}>{t('Имя')} *</Text>
               <TextInput style={s.input} value={form.first_name} onChangeText={v => setForm({...form, first_name: v})} />
-              <Text style={s.label}>Отчество</Text>
+              <Text style={s.label}>{t('Отчество')}</Text>
               <TextInput style={s.input} value={form.middle_name} onChangeText={v => setForm({...form, middle_name: v})} />
-              <Text style={s.label}>Дата рождения * (ГГГГ-ММ-ДД)</Text>
+              <Text style={s.label}>{t('Дата рождения')} * (ГГГГ-ММ-ДД)</Text>
               <TextInput style={s.input} value={form.birth_date} onChangeText={v => setForm({...form, birth_date: v})} placeholder="2000-01-15" placeholderTextColor="#bbb" />
             </ScrollView>
             <View style={s.modalFooter}>
               <TouchableOpacity style={s.cancelBtn} onPress={() => { setShowCreate(false); setError(''); }}>
-                <Text style={s.cancelBtnText}>Отмена</Text>
+                <Text style={s.cancelBtnText}>{t('Отмена')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.primaryBtn, saving && { opacity: 0.6 }]} onPress={handleCreate} disabled={saving}>
-                {saving ? <ActivityIndicator color="#fff" /> : <Text style={s.primaryBtnText}>Создать</Text>}
+                {saving ? <ActivityIndicator color="#fff" /> : <Text style={s.primaryBtnText}>{t('Создать')}</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -234,7 +236,7 @@ export default function PatientsScreen({ navigation }) {
           <View style={[s.modal, { maxHeight: '80%' }]}>
             <View style={s.modalHeader}>
               <Text style={s.modalTitle}>
-                История болезни{history ? `: ${history.patient_name}` : ''}
+                {t('История болезни')}{history ? `: ${history.patient_name}` : ''}
               </Text>
               <TouchableOpacity onPress={() => setShowHistory(false)}>
                 <Ionicons name="close" size={24} color="#333" />
@@ -246,10 +248,10 @@ export default function PatientsScreen({ navigation }) {
               {history && (
                 <>
                   <Text style={s.historyMeta}>
-                    Дата рождения: {history.birth_date || '—'} · Всего консультаций: {history.total_consultations}
+                    {t('Дата рождения')}: {history.birth_date || '—'} · {t('Всего консультаций')}: {history.total_consultations}
                   </Text>
                   {history.consultations?.length === 0 ? (
-                    <Text style={s.emptyText}>Нет консультаций</Text>
+                    <Text style={s.emptyText}>{t('Нет консультаций')}</Text>
                   ) : (
                     history.consultations?.map(c => (
                       <TouchableOpacity key={c.id} style={s.historyCard} onPress={() => {
@@ -258,7 +260,7 @@ export default function PatientsScreen({ navigation }) {
                       }}>
                         <View>
                           <Text style={s.historyDate}>{new Date(c.created_at).toLocaleDateString('ru-RU')}</Text>
-                          <Text style={s.historyInfo}>{c.doctor_name} · {c.diagnosis || 'Без диагноза'}</Text>
+                          <Text style={s.historyInfo}>{c.doctor_name} · {c.diagnosis || t('Без диагноза')}</Text>
                         </View>
                         <Text style={[s.badge, c.status === 'ready' && s.badgeSuccess]}>
                           {c.has_pdf ? '📄 PDF' : c.status}

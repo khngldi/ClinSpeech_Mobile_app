@@ -3,278 +3,425 @@ import {
     View,
     Text,
     StyleSheet,
-    TouchableOpacity,
     TextInput,
-    ScrollView,
-    Image,
-    ImageBackground,
-    SafeAreaView,
+    TouchableOpacity,
+    ActivityIndicator,
     Dimensions,
+    Image,
+    SafeAreaView,
+    KeyboardAvoidingView,
     Platform,
+    ScrollView,
     Animated,
     Easing,
-    KeyboardAvoidingView,
-    ActivityIndicator
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BASE_URL, safeJson } from '../api';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const BRAND_CYAN = '#00CCFF';
-const TOTAL_STEPS = 5; // теперь всего 5 шагов
+const { width: SW } = Dimensions.get('window');
+const MINT = '#2ec4b6';
+const MINT_LIGHT = '#5eead4';
+const MINT_DARK = '#14b8a6';
+const PURPLE = '#a78bfa';
+
+/* ── Animated floating blob ── */
+function FloatingBlob({ color, size, startX, startY, delay }) {
+    const translateX = useRef(new Animated.Value(0)).current;
+    const translateY = useRef(new Animated.Value(0)).current;
+    const scale = useRef(new Animated.Value(1)).current;
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.delay(delay),
+                Animated.parallel([
+                    Animated.timing(translateX, { toValue: 80, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(translateY, { toValue: -60, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(scale, { toValue: 1.2, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                ]),
+                Animated.parallel([
+                    Animated.timing(translateX, { toValue: -50, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(translateY, { toValue: 90, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(scale, { toValue: 0.85, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                ]),
+                Animated.parallel([
+                    Animated.timing(translateX, { toValue: 60, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(translateY, { toValue: 40, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(scale, { toValue: 1.1, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                ]),
+                Animated.parallel([
+                    Animated.timing(translateX, { toValue: 0, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(translateY, { toValue: 0, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(scale, { toValue: 1, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                ]),
+            ])
+        ).start();
+    }, []);
+
+    return (
+        <Animated.View style={{
+            position: 'absolute', left: startX, top: startY,
+            width: size, height: size, borderRadius: size / 2,
+            backgroundColor: color, opacity: 0.25,
+            transform: [{ translateX }, { translateY }, { scale }],
+        }} />
+    );
+}
 
 export default function RegisterScreen() {
-    const [step, setStep] = useState(1);
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    const slideAnim = useRef(new Animated.Value(30)).current;
-    const codeInputRef = useRef(null);
     const navigation = useNavigation();
-
-    const [apiError, setApiError] = useState('');
+    const [step, setStep] = useState(1); // 1=email, 2=code, 3=form, 4=success
+    const [email, setEmail] = useState('');
+    const [code, setCode] = useState('');
+    const [form, setForm] = useState({
+        username: '',
+        password: '',
+        first_name: '',
+        last_name: '',
+        middle_name: '',
+        phone: '',
+        role: 'doctor',
+    });
+    const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    const [form, setForm] = useState({
-        lastName: '',
-        firstName: '',
-        middleName: '',
-        iin: '',
-        birthDate: '',
-        city: '',
-        email: '',
-        code: '',
-        password: '',
-        confirmPassword: ''
-    });
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(20)).current;
 
     useEffect(() => {
         fadeAnim.setValue(0);
-        slideAnim.setValue(30);
-
+        slideAnim.setValue(20);
         Animated.parallel([
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 300,
-                easing: Easing.out(Easing.ease),
-                useNativeDriver: true
-            }),
-            Animated.timing(slideAnim, {
-                toValue: 0,
-                duration: 300,
-                useNativeDriver: true
-            })
+            Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+            Animated.timing(slideAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
         ]).start();
     }, [step]);
 
-    const formatDate = (value) => {
-        const cleaned = value.replace(/\D/g, '');
-        let formatted = cleaned;
-        if (cleaned.length > 2) formatted = cleaned.slice(0, 2) + '-' + cleaned.slice(2);
-        if (cleaned.length > 4) formatted = cleaned.slice(0, 2) + '-' + cleaned.slice(2, 4) + '-' + cleaned.slice(4, 8);
-        return formatted;
-    };
-
-    const isValidDate = /^\d{2}-\d{2}-\d{4}$/.test(form.birthDate);
-    const isPasswordValid = () => /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/.test(form.password);
-    const isCodeValid = () => form.code.length === 6;
-
-    const canProceed = () => {
-        switch (step) {
-            case 1:
-                return form.lastName && form.firstName && form.iin.length === 12 && isValidDate && form.city;
-            case 2:
-                return form.email.includes('@');
-            case 3:
-                return isCodeValid();
-            case 4:
-                return isPasswordValid() && form.password === form.confirmPassword;
-            default:
-                return true;
+    const handleSendCode = async () => {
+        if (!email.includes('@')) {
+            setError('Введите корректный email');
+            return;
         }
-    };
-
-    const renderCodeInputs = () => (
-        <View style={{ alignItems: 'center' }}>
-            <TouchableOpacity
-                activeOpacity={1}
-                onPress={() => codeInputRef.current?.focus()}
-                style={styles.codeContainer}
-            >
-                {[0,1,2,3,4,5].map(index => (
-                    <View key={index} style={styles.codeBox}>
-                        <Text style={styles.codeDigit}>
-                            {form.code[index] || ''}
-                        </Text>
-                    </View>
-                ))}
-            </TouchableOpacity>
-            <TextInput
-                ref={codeInputRef}
-                value={form.code}
-                onChangeText={(text) => {
-                    const cleaned = text.replace(/[^0-9]/g, '').slice(0,6);
-                    setForm(prev => ({ ...prev, code: cleaned }));
-                }}
-                keyboardType="numeric"
-                maxLength={6}
-                style={{ position:'absolute', opacity:0 }}
-            />
-        </View>
-    );
-
-    const nextStep = async () => {
-        setApiError('');
+        setError('');
+        setIsLoading(true);
         try {
-            if (step === 2) {
-                // Отправляем код на email
-                setIsLoading(true);
-                const r = await fetch(`${BASE_URL}/send-code/`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: form.email }),
-                });
-                if (!r.ok) {
-                    const d = await safeJson(r);
-                    throw new Error(d.detail || d.email?.[0] || 'Ошибка отправки кода');
-                }
+            const res = await fetch(`${BASE_URL}/send-code/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            });
+            if (!res.ok) {
+                const d = await safeJson(res);
+                throw new Error(d.detail || d.email?.[0] || 'Ошибка отправки кода');
             }
-            if (step === 4) {
-                // Регистрация
-                setIsLoading(true);
-                const r = await fetch(`${BASE_URL}/register/`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        username: form.email,
-                        password: form.password,
-                        email: form.email,
-                        first_name: form.firstName,
-                        last_name: form.lastName,
-                        middle_name: form.middleName,
-                        role: 'doctor',
-                        phone: '',
-                    }),
-                });
-                if (!r.ok) {
-                    const d = await safeJson(r);
-                    const msg = d.detail || d.username?.[0] || d.email?.[0] || d.password?.[0] || 'Ошибка регистрации';
-                    throw new Error(msg);
-                }
-            }
-            if (step < TOTAL_STEPS) setStep(prev => prev + 1);
+            setStep(2);
         } catch (e) {
-            setApiError(e.message);
+            setError(e.message);
         } finally {
             setIsLoading(false);
         }
     };
 
-    const renderWizard = () => (
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-            {/* STEP 1 - Личные данные */}
-            {step === 1 && (
-                <Animated.View style={{opacity:fadeAnim, transform:[{translateY:slideAnim}]}}>
-                    <Title text="Регистрация пациента" />
-                    <Input placeholder="Фамилия" value={form.lastName} onChangeText={v => setForm({...form,lastName:v})}/>
-                    <Input placeholder="Имя" value={form.firstName} onChangeText={v => setForm({...form,firstName:v})}/>
-                    <Input placeholder="Отчество" value={form.middleName} onChangeText={v => setForm({...form,middleName:v})}/>
-                    <Input placeholder="ИИН" keyboardType="numeric" maxLength={12} value={form.iin} onChangeText={v => setForm({...form,iin:v.replace(/[^0-9]/g,'')})}/>
-                    <Input placeholder="ДД-ММ-ГГГГ" keyboardType="numeric" maxLength={10} value={form.birthDate} onChangeText={v => setForm({...form,birthDate:formatDate(v)})}/>
-                    <Input placeholder="Город" value={form.city} onChangeText={v => setForm({...form,city:v})}/>
-                </Animated.View>
-            )}
+    const handleVerifyCode = () => {
+        if (code.length !== 6) {
+            setError('Введите 6-значный код');
+            return;
+        }
+        setError('');
+        setStep(3);
+    };
 
-            {/* STEP 2 - Email */}
-            {step === 2 && (
-                <Animated.View style={{opacity:fadeAnim, transform:[{translateY:slideAnim}]}}>
-                    <Title text="Электронная почта" />
-                    <Input placeholder="example@mail.com" keyboardType="email-address" value={form.email} onChangeText={v=>setForm({...form,email:v})}/>
-                </Animated.View>
-            )}
+    const handleRegister = async () => {
+        if (!form.last_name || !form.first_name || !form.username || form.password.length < 8) {
+            setError('Заполните все обязательные поля. Пароль минимум 8 символов.');
+            return;
+        }
+        setError('');
+        setIsLoading(true);
+        try {
+            const res = await fetch(`${BASE_URL}/register/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...form,
+                    email,
+                }),
+            });
+            if (!res.ok) {
+                const d = await safeJson(res);
+                const msg = d.detail || d.username?.[0] || d.email?.[0] || d.password?.[0] || 'Ошибка регистрации';
+                throw new Error(msg);
+            }
+            setStep(4);
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-            {/* STEP 3 - Код подтверждения */}
-            {step === 3 && (
-                <Animated.View style={{opacity:fadeAnim, transform:[{translateY:slideAnim}]}}>
-                    <Title text="Код подтверждения" />
-                    {renderCodeInputs()}
-                </Animated.View>
-            )}
-
-            {/* STEP 4 - Пароль */}
-            {step === 4 && (
-                <Animated.View style={{opacity:fadeAnim, transform:[{translateY:slideAnim}]}}>
-                    <Title text="Создать пароль" />
-                    <Text style={styles.passwordInfo}>
-                        Пароль должен содержать минимум 8 символов, 1 латинскую букву, 1 цифру и 1 спецсимвол.
-                    </Text>
-                    <Input secureTextEntry placeholder="Введите пароль" value={form.password} onChangeText={v=>setForm({...form,password:v})}/>
-                    <Input secureTextEntry placeholder="Подтвердите пароль" value={form.confirmPassword} onChangeText={v=>setForm({...form,confirmPassword:v})}/>
-                </Animated.View>
-            )}
-
-            {/* STEP 5 - Завершение */}
-            {step === 5 && (
-                <View style={{alignItems:'center',marginTop:50}}>
-                    <Title text="Регистрация завершена" />
-                    <Text style={styles.finalText}>Ваш аккаунт успешно создан. Теперь вы можете войти в систему.</Text>
-                    <View style={styles.buttonContainer}>
-                        <MainButton title="ВОЙТИ" onPress={()=>navigation.navigate('Login')} />
-                    </View>
-                </View>
-            )}
-
-            {step <= 4 && canProceed() && (
-                <View style={styles.buttonContainer}>
-                    {apiError ? <Text style={{ color: 'red', textAlign: 'center', marginBottom: 8 }}>{apiError}</Text> : null}
-                    {isLoading
-                        ? <ActivityIndicator color={BRAND_CYAN} size="large" />
-                        : <MainButton title="ДАЛЕЕ" onPress={nextStep}/>
-                    }
-                </View>
-            )}
-        </ScrollView>
+    const renderStepIndicator = () => (
+        <View style={styles.stepIndicator}>
+            {[1, 2, 3].map((s) => (
+                <View
+                    key={s}
+                    style={[
+                        styles.stepDot,
+                        s <= step && s < 4 && styles.stepDotActive,
+                    ]}
+                />
+            ))}
+        </View>
     );
 
-    return(
-        <View style={styles.container}>
-            <View style={styles.headerContainer}>
-                <ImageBackground source={require('../assets/Ellipse 4.png')} style={styles.headerBackground} resizeMode="stretch">
-                    <SafeAreaView style={styles.safeArea}>
-                        <Text style={styles.headerTitle}>ClinSpeech</Text>
-                    </SafeAreaView>
-                </ImageBackground>
+    const getStepTitle = () => {
+        switch (step) {
+            case 1: return 'Подтвердите email';
+            case 2: return 'Введите код';
+            case 3: return 'Создать аккаунт';
+            case 4: return 'Готово!';
+            default: return '';
+        }
+    };
+
+    return (
+        <View style={styles.gradientContainer}>
+            {/* Animated gradient blobs */}
+            <View style={styles.blobLayer} pointerEvents="none">
+                <FloatingBlob color={MINT} size={280} startX={-70} startY={30} delay={0} />
+                <FloatingBlob color={MINT_LIGHT} size={220} startX={SW - 120} startY={150} delay={2000} />
+                <FloatingBlob color={PURPLE} size={200} startX={20} startY={400} delay={4500} />
+                <FloatingBlob color={MINT_DARK} size={240} startX={SW - 180} startY={500} delay={7000} />
             </View>
 
-            <KeyboardAvoidingView style={styles.content} behavior={Platform.OS==='ios'?'padding':undefined}>
-                {renderWizard()}
-            </KeyboardAvoidingView>
+            <SafeAreaView style={{ flex: 1 }}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                    style={{ flex: 1 }}
+                >
+                    <ScrollView
+                        contentContainerStyle={styles.container}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        {/* LOGO */}
+                        <View style={styles.logoWrapper}>
+                            <Image
+                                source={require('../assets/App_logo.png')}
+                                style={styles.logo}
+                                resizeMode="contain"
+                            />
+                            <Text style={styles.appTitle}>ClinSpeech</Text>
+                        </View>
+
+                        {/* CARD */}
+                        <Animated.View style={[styles.card, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+                            <Text style={styles.title}>{getStepTitle()}</Text>
+                            
+                            {step < 4 && renderStepIndicator()}
+
+                            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+                            {/* Step 1: Email */}
+                            {step === 1 && (
+                                <>
+                                    <Text style={styles.subtitle}>На указанный адрес будет отправлен код подтверждения</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Email"
+                                        placeholderTextColor="#999"
+                                        keyboardType="email-address"
+                                        autoCapitalize="none"
+                                        value={email}
+                                        onChangeText={setEmail}
+                                        editable={!isLoading}
+                                    />
+                                    <TouchableOpacity
+                                        style={[styles.button, isLoading && { opacity: 0.6 }]}
+                                        onPress={handleSendCode}
+                                        disabled={isLoading}
+                                    >
+                                        {isLoading ? (
+                                            <ActivityIndicator color="#FFF" />
+                                        ) : (
+                                            <Text style={styles.buttonText}>ОТПРАВИТЬ КОД</Text>
+                                        )}
+                                    </TouchableOpacity>
+                                </>
+                            )}
+
+                            {/* Step 2: Code */}
+                            {step === 2 && (
+                                <>
+                                    <Text style={styles.subtitle}>Код отправлен на {email}</Text>
+                                    <TextInput
+                                        style={[styles.input, styles.codeInput]}
+                                        placeholder="000000"
+                                        placeholderTextColor="#999"
+                                        keyboardType="number-pad"
+                                        maxLength={6}
+                                        value={code}
+                                        onChangeText={(t) => setCode(t.replace(/\D/g, ''))}
+                                    />
+                                    <TouchableOpacity style={styles.button} onPress={handleVerifyCode}>
+                                        <Text style={styles.buttonText}>ПОДТВЕРДИТЬ</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={() => { setStep(1); setError(''); }}>
+                                        <Text style={styles.link}>Изменить email</Text>
+                                    </TouchableOpacity>
+                                </>
+                            )}
+
+                            {/* Step 3: Registration form */}
+                            {step === 3 && (
+                                <>
+                                    <Text style={styles.emailConfirmed}>Email: {email}</Text>
+                                    <View style={styles.row}>
+                                        <TextInput
+                                            style={[styles.input, styles.halfInput]}
+                                            placeholder="Фамилия *"
+                                            placeholderTextColor="#999"
+                                            value={form.last_name}
+                                            onChangeText={(v) => setForm({ ...form, last_name: v })}
+                                        />
+                                        <TextInput
+                                            style={[styles.input, styles.halfInput]}
+                                            placeholder="Имя *"
+                                            placeholderTextColor="#999"
+                                            value={form.first_name}
+                                            onChangeText={(v) => setForm({ ...form, first_name: v })}
+                                        />
+                                    </View>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Отчество"
+                                        placeholderTextColor="#999"
+                                        value={form.middle_name}
+                                        onChangeText={(v) => setForm({ ...form, middle_name: v })}
+                                    />
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Имя пользователя *"
+                                        placeholderTextColor="#999"
+                                        autoCapitalize="none"
+                                        value={form.username}
+                                        onChangeText={(v) => setForm({ ...form, username: v })}
+                                    />
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Телефон"
+                                        placeholderTextColor="#999"
+                                        keyboardType="phone-pad"
+                                        value={form.phone}
+                                        onChangeText={(v) => setForm({ ...form, phone: v })}
+                                    />
+                                    <View style={styles.roleSelector}>
+                                        <TouchableOpacity
+                                            style={[styles.roleBtn, form.role === 'doctor' && styles.roleBtnActive]}
+                                            onPress={() => setForm({ ...form, role: 'doctor' })}
+                                        >
+                                            <Text style={[styles.roleText, form.role === 'doctor' && styles.roleTextActive]}>Врач</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={[styles.roleBtn, form.role === 'patient' && styles.roleBtnActive]}
+                                            onPress={() => setForm({ ...form, role: 'patient' })}
+                                        >
+                                            <Text style={[styles.roleText, form.role === 'patient' && styles.roleTextActive]}>Пациент</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Пароль * (мин. 8 символов)"
+                                        placeholderTextColor="#999"
+                                        secureTextEntry
+                                        value={form.password}
+                                        onChangeText={(v) => setForm({ ...form, password: v })}
+                                    />
+                                    <TouchableOpacity
+                                        style={[styles.button, isLoading && { opacity: 0.6 }]}
+                                        onPress={handleRegister}
+                                        disabled={isLoading}
+                                    >
+                                        {isLoading ? (
+                                            <ActivityIndicator color="#FFF" />
+                                        ) : (
+                                            <Text style={styles.buttonText}>ЗАРЕГИСТРИРОВАТЬСЯ</Text>
+                                        )}
+                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={() => { setStep(1); setError(''); }}>
+                                        <Text style={styles.link}>Назад</Text>
+                                    </TouchableOpacity>
+                                </>
+                            )}
+
+                            {/* Step 4: Success */}
+                            {step === 4 && (
+                                <>
+                                    <Text style={styles.successText}>
+                                        Ваш аккаунт успешно создан!{'\n'}Теперь вы можете войти в систему.
+                                    </Text>
+                                    <TouchableOpacity
+                                        style={styles.button}
+                                        onPress={() => navigation.navigate('Login')}
+                                    >
+                                        <Text style={styles.buttonText}>ВОЙТИ</Text>
+                                    </TouchableOpacity>
+                                </>
+                            )}
+
+                            {step < 4 && (
+                                <>
+                                    <View style={styles.dividerContainer}>
+                                        <View style={styles.divider} />
+                                        <Text style={styles.dividerText}>или</Text>
+                                        <View style={styles.divider} />
+                                    </View>
+
+                                    <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                                        <Text style={styles.registerText}>
+                                            Уже есть аккаунт?{' '}
+                                            <Text style={{ color: MINT }}>Войти</Text>
+                                        </Text>
+                                    </TouchableOpacity>
+                                </>
+                            )}
+                        </Animated.View>
+                    </ScrollView>
+                </KeyboardAvoidingView>
+            </SafeAreaView>
         </View>
     );
 }
 
-/* ---------- COMPONENTS ---------- */
-
-const Title = ({text}) => (<Text style={styles.selectionTitle}>{text}</Text>);
-const Input = props => (<TextInput style={styles.input} placeholderTextColor="#999" {...props}/>);
-const MainButton = ({title,onPress}) => (<TouchableOpacity style={styles.roleButton} onPress={onPress}><Text style={styles.buttonText}>{title}</Text></TouchableOpacity>);
-
-/* ---------- STYLES ---------- */
-
 const styles = StyleSheet.create({
-    container:{flex:1,backgroundColor:'#FFF'},
-    headerContainer:{width:'100%',height:150},
-    headerBackground:{width:'100%',height:'100%'},
-    safeArea:{flex:1,justifyContent:'center',alignItems:'center'},
-    headerTitle:{fontSize:26,fontWeight:'bold',color:'#FFF'},
-    content:{flex:1,width:'100%',paddingHorizontal:20},
-    scrollContent:{flexGrow:1,paddingBottom:40},
-    selectionTitle:{fontSize:22,fontWeight:'bold',textAlign:'center',marginBottom:25,color:'#333'},
-    input:{borderBottomWidth:1,borderBottomColor:BRAND_CYAN,marginBottom:20,paddingVertical:10,fontSize:16},
-    buttonContainer:{width:'85%',maxWidth:400,alignSelf:'center',marginTop:20},
-    roleButton:{backgroundColor:BRAND_CYAN,paddingVertical:16,borderRadius:15,alignItems:'center'},
-    buttonText:{color:'#FFF',fontSize:18,fontWeight:'bold'},
-    passwordInfo:{fontSize:13,color:'#666',marginBottom:20},
-    finalText:{textAlign:'center',fontSize:16,color:'#444',paddingHorizontal:20},
-    codeContainer:{flexDirection:'row',justifyContent:'space-between',marginTop:20},
-    codeBox:{borderBottomWidth:2,borderBottomColor:BRAND_CYAN,width:45,alignItems:'center',paddingVertical:10},
-    codeDigit:{fontSize:22}
+    gradientContainer: { flex: 1, backgroundColor: '#f8fafc' },
+    blobLayer: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
+    container: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 20, position: 'relative', zIndex: 1 },
+    logoWrapper: { alignItems: 'center', marginBottom: 30 },
+    logo: { width: 60, height: 60 },
+    appTitle: { fontSize: 28, fontWeight: 'bold', color: '#1a1a2e', marginTop: 10 },
+    card: { width: '100%', maxWidth: 400, backgroundColor: '#FFF', borderRadius: 20, padding: 25, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 16, elevation: 5 },
+    title: { fontSize: 22, fontWeight: 'bold', marginBottom: 8, color: '#1F2937', textAlign: 'center' },
+    subtitle: { color: '#666', marginBottom: 20, textAlign: 'center', fontSize: 14 },
+    stepIndicator: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 20 },
+    stepDot: { width: 32, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB' },
+    stepDotActive: { backgroundColor: MINT },
+    input: { borderWidth: 1, borderColor: '#DDD', borderRadius: 12, padding: 14, marginBottom: 12, fontSize: 16 },
+    codeInput: { textAlign: 'center', fontSize: 24, letterSpacing: 8, fontWeight: '600' },
+    row: { flexDirection: 'row', gap: 10 },
+    halfInput: { flex: 1 },
+    button: { backgroundColor: MINT, padding: 15, borderRadius: 12, alignItems: 'center', marginTop: 8 },
+    buttonText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+    errorText: { color: '#EF4444', marginBottom: 10, textAlign: 'center' },
+    link: { color: MINT, textAlign: 'center', marginTop: 15 },
+    emailConfirmed: { color: '#666', marginBottom: 16, textAlign: 'center', fontSize: 13 },
+    roleSelector: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+    roleBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: '#DDD', alignItems: 'center' },
+    roleBtnActive: { borderColor: MINT, backgroundColor: MINT + '15' },
+    roleText: { fontSize: 15, color: '#666' },
+    roleTextActive: { color: MINT, fontWeight: '600' },
+    successText: { textAlign: 'center', fontSize: 16, color: '#444', marginBottom: 20, lineHeight: 24 },
+    dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 20 },
+    divider: { flex: 1, height: 1, backgroundColor: '#DDD' },
+    dividerText: { marginHorizontal: 10, color: '#999' },
+    registerText: { textAlign: 'center', color: '#666' },
 });

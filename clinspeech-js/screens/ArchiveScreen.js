@@ -6,13 +6,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { apiFetch, safeJson } from '../api';
+import { useLocale } from '../i18n/LocaleContext';
 
 const PRIMARY = '#2ec4b6';
 const STATUS_COLORS = { created: '#9CA3AF', processing: '#3B82F6', generating: '#F59E0B', ready: '#22C55E', error: '#EF4444' };
-const STATUS_LABELS = { created: 'Создано', processing: 'Обработка', generating: 'Генерация', ready: 'Готово', error: 'Ошибка' };
-const STATUSES = ['', 'created', 'processing', 'generating', 'ready', 'error'];
 
 export default function ArchiveScreen({ navigation }) {
+  const { t } = useLocale();
+  const STATUS_LABELS = { created: t('Создано'), processing: t('Обработка'), generating: t('Генерация'), ready: t('Готово'), error: t('Ошибка') };
+  const STATUSES = ['', 'created', 'processing', 'generating', 'ready', 'error'];
+
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
@@ -78,7 +81,7 @@ export default function ArchiveScreen({ navigation }) {
           {item.images_count > 0 && (
             <View style={s.metaItem}>
               <Ionicons name="image-outline" size={14} color="#888" />
-              <Text style={s.metaText}>{item.images_count} снимков</Text>
+              <Text style={s.metaText}>{item.images_count} {t('снимков')}</Text>
             </View>
           )}
         </View>
@@ -90,13 +93,13 @@ export default function ArchiveScreen({ navigation }) {
     <SafeAreaView style={s.container}>
       <View style={s.header}>
         <View>
-          <Text style={s.title}>{isPatient ? 'Мои консультации' : 'Архив'}</Text>
-          <Text style={s.subtitle}>{items.length} записей</Text>
+          <Text style={s.title}>{isPatient ? t('Мои консультации') : t('Архив')}</Text>
+          <Text style={s.subtitle}>{items.length} {t('записей')}</Text>
         </View>
         {!isPatient && (
           <TouchableOpacity style={s.newBtn} onPress={() => navigation.navigate('RecordPage')}>
             <Ionicons name="add" size={20} color="#fff" />
-            <Text style={s.newBtnText}>Новый приём</Text>
+            <Text style={s.newBtnText}>{t('Новый приём')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -107,7 +110,7 @@ export default function ArchiveScreen({ navigation }) {
           <Ionicons name="search" size={18} color="#999" />
           <TextInput
             style={s.searchInput}
-            placeholder="Поиск по пациенту или ID..."
+            placeholder={t('Поиск по пациенту или ID...')}
             placeholderTextColor="#999"
             value={search}
             onChangeText={setSearch}
@@ -130,7 +133,7 @@ export default function ArchiveScreen({ navigation }) {
               onPress={() => setFilter(st)}
             >
               <Text style={[s.filterChipText, filter === st && s.filterChipTextActive]}>
-                {st ? STATUS_LABELS[st] : 'Все'}
+                {st ? STATUS_LABELS[st] : t('Все')}
               </Text>
             </TouchableOpacity>
           ))}
@@ -143,9 +146,9 @@ export default function ArchiveScreen({ navigation }) {
       ) : filtered.length === 0 ? (
         <View style={s.empty}>
           <Ionicons name="document-text-outline" size={48} color="#ccc" />
-          <Text style={s.emptyTitle}>Нет консультаций</Text>
+          <Text style={s.emptyTitle}>{t('Нет консультаций')}</Text>
           <Text style={s.emptyText}>
-            {isPatient ? 'У вас пока нет записей о консультациях' : 'Создайте новый приём для начала работы'}
+            {isPatient ? t('У вас пока нет записей о консультациях') : t('Создайте новый приём для начала работы')}
           </Text>
         </View>
       ) : (

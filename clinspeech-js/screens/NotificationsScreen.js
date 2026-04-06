@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 import { apiFetch, safeJson } from '../api';
+import { useLocale } from '../i18n/LocaleContext';
 
 const MINT = '#2ec4b6';
 
@@ -24,6 +25,7 @@ const TYPE_ICONS = {
 };
 
 export default function NotificationsScreen() {
+    const { t } = useLocale();
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -140,16 +142,16 @@ export default function NotificationsScreen() {
             <SafeAreaView style={s.safeArea}>
                 <View style={s.header}>
                     <View>
-                        <Text style={s.title}>Уведомления</Text>
+                        <Text style={s.title}>{t('Уведомления')}</Text>
                         <Text style={s.subtitle}>
                             {unreadCount > 0 
-                                ? `${unreadCount} непрочитанных` 
-                                : 'Все прочитаны'}
+                                ? `${unreadCount} ${t('непрочитанных')}` 
+                                : t('Все прочитаны')}
                         </Text>
                     </View>
                     {unreadCount > 0 && (
                         <TouchableOpacity style={s.markAllBtn} onPress={handleMarkAllRead}>
-                            <Text style={s.markAllText}>Прочитать все</Text>
+                            <Text style={s.markAllText}>{t('Прочитать все')}</Text>
                         </TouchableOpacity>
                     )}
                 </View>
@@ -170,9 +172,9 @@ export default function NotificationsScreen() {
                     ListEmptyComponent={
                         <View style={s.emptyState}>
                             <Ionicons name="notifications-off-outline" size={48} color="#94a3b8" />
-                            <Text style={s.emptyTitle}>Нет уведомлений</Text>
+                            <Text style={s.emptyTitle}>{t('Нет уведомлений')}</Text>
                             <Text style={s.emptySubtitle}>
-                                Уведомления появятся здесь
+                                {t('Новые уведомления появятся здесь')}
                             </Text>
                         </View>
                     }
