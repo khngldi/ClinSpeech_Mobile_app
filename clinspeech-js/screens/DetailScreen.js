@@ -44,7 +44,7 @@ export default function DetailScreen({ navigation, route }) {
     const statusColor = { created: '#B0B0B0', processing: '#F1C40F', generating: '#F39C12', ready: '#32CD32', error: '#E74C3C' };
     const waveHeights = [10, 20, 15, 30, 40, 25, 50, 70, 45, 80, 50, 90, 60, 40, 75, 50, 30, 45, 20, 15, 10];
 
-    const consultationId = route?.params?.consultation?.id;
+    const consultationId = route?.params?.consultation?.id ?? route?.params?.consultationId;
     const [data, setData] = useState(route?.params?.consultation || null);
     const [loading, setLoading] = useState(true);
     const [editing, setEditing] = useState(false);
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
     progressBarBackground: {
         width: '100%',
         height: 4,
-        backgroundColor: '#E0F7FA',
+        backgroundColor: '#ccfbf1',
         borderRadius: 2,
         flexDirection: 'row',
         alignItems: 'center',
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 16,
         borderWidth: 1,
-        borderColor: '#E0F7FA',
+        borderColor: '#ccfbf1',
     },
     processingTitle: {
         fontSize: 16,
@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
         width: 110,
         height: 110,
         borderRadius: 55,
-        backgroundColor: 'rgba(0, 191, 255, 0.2)',
+        backgroundColor: 'rgba(46, 196, 182, 0.2)',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
         width: 90,
         height: 90,
         borderRadius: 45,
-        backgroundColor: 'rgba(0, 191, 255, 0.5)',
+        backgroundColor: 'rgba(46, 196, 182, 0.5)',
         alignItems: 'center',
         justifyContent: 'center',
     },

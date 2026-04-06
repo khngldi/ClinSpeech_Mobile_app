@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
-const BRAND_CYAN = '#00CCFF';
+const BRAND_MINT = '#2ec4b6';
 
 export default function PasswordForgotScreen() {
     const [step, setStep] = useState(1);
@@ -190,13 +190,13 @@ const styles = StyleSheet.create({
     content:{flex:1,width:'100%',paddingHorizontal:20},
     scrollContent:{flexGrow:1,paddingBottom:40},
     selectionTitle:{fontSize:22,fontWeight:'bold',textAlign:'center',marginBottom:25,color:'#333'},
-    input:{borderBottomWidth:1,borderBottomColor:BRAND_CYAN,marginBottom:20,paddingVertical:10,fontSize:16},
+    input:{borderBottomWidth:1,borderBottomColor:BRAND_MINT,marginBottom:20,paddingVertical:10,fontSize:16},
     buttonContainer:{width:'85%',maxWidth:400,alignSelf:'center',marginTop:20},
-    roleButton:{backgroundColor:BRAND_CYAN,paddingVertical:16,borderRadius:15,alignItems:'center'},
+    roleButton:{backgroundColor:BRAND_MINT,paddingVertical:16,borderRadius:15,alignItems:'center'},
     buttonText:{color:'#FFF',fontSize:18,fontWeight:'bold'},
     passwordInfo:{fontSize:13,color:'#666',marginBottom:20},
     finalText:{textAlign:'center',fontSize:16,color:'#444',paddingHorizontal:20},
     codeContainer:{flexDirection:'row',justifyContent:'space-between',marginTop:20},
-    codeBox:{borderBottomWidth:2,borderBottomColor:BRAND_CYAN,width:45,alignItems:'center',paddingVertical:10},
+    codeBox:{borderBottomWidth:2,borderBottomColor:BRAND_MINT,width:45,alignItems:'center',paddingVertical:10},
     codeDigit:{fontSize:22}
 });

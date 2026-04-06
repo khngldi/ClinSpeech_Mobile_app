@@ -17,10 +17,10 @@ import {
     ActivityIndicator
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { BASE_URL, safeJson } from '../api';
+import { apiFetch, safeJson } from '../api';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const BRAND_CYAN = '#00CCFF';
+const BRAND_MINT = '#2ec4b6';
 const TOTAL_STEPS = 5; // теперь всего 5 шагов
 
 export default function RegisterScreen() {
@@ -127,9 +127,8 @@ export default function RegisterScreen() {
             if (step === 2) {
                 // Отправляем код на email
                 setIsLoading(true);
-                const r = await fetch(`${BASE_URL}/send-code/`, {
+                const r = await apiFetch('/send-code/', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: form.email }),
                 });
                 if (!r.ok) {
@@ -140,9 +139,8 @@ export default function RegisterScreen() {
             if (step === 4) {
                 // Регистрация
                 setIsLoading(true);
-                const r = await fetch(`${BASE_URL}/register/`, {
+                const r = await apiFetch('/register/', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         username: form.email,
                         password: form.password,
@@ -226,7 +224,7 @@ export default function RegisterScreen() {
                 <View style={styles.buttonContainer}>
                     {apiError ? <Text style={{ color: 'red', textAlign: 'center', marginBottom: 8 }}>{apiError}</Text> : null}
                     {isLoading
-                        ? <ActivityIndicator color={BRAND_CYAN} size="large" />
+                        ? <ActivityIndicator color={BRAND_MINT} size="large" />
                         : <MainButton title="ДАЛЕЕ" onPress={nextStep}/>
                     }
                 </View>
@@ -268,13 +266,13 @@ const styles = StyleSheet.create({
     content:{flex:1,width:'100%',paddingHorizontal:20},
     scrollContent:{flexGrow:1,paddingBottom:40},
     selectionTitle:{fontSize:22,fontWeight:'bold',textAlign:'center',marginBottom:25,color:'#333'},
-    input:{borderBottomWidth:1,borderBottomColor:BRAND_CYAN,marginBottom:20,paddingVertical:10,fontSize:16},
+    input:{borderBottomWidth:1,borderBottomColor:BRAND_MINT,marginBottom:20,paddingVertical:10,fontSize:16},
     buttonContainer:{width:'85%',maxWidth:400,alignSelf:'center',marginTop:20},
-    roleButton:{backgroundColor:BRAND_CYAN,paddingVertical:16,borderRadius:15,alignItems:'center'},
+    roleButton:{backgroundColor:BRAND_MINT,paddingVertical:16,borderRadius:15,alignItems:'center'},
     buttonText:{color:'#FFF',fontSize:18,fontWeight:'bold'},
     passwordInfo:{fontSize:13,color:'#666',marginBottom:20},
     finalText:{textAlign:'center',fontSize:16,color:'#444',paddingHorizontal:20},
     codeContainer:{flexDirection:'row',justifyContent:'space-between',marginTop:20},
-    codeBox:{borderBottomWidth:2,borderBottomColor:BRAND_CYAN,width:45,alignItems:'center',paddingVertical:10},
+    codeBox:{borderBottomWidth:2,borderBottomColor:BRAND_MINT,width:45,alignItems:'center',paddingVertical:10},
     codeDigit:{fontSize:22}
 });

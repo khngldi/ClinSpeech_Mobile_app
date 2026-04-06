@@ -53,6 +53,13 @@ export default function DashboardScreen({ navigation }) {
   const isPatient = user?.role === 'patient';
   const displayName = user?.first_name || user?.full_name || user?.username || 'Доктор';
   const statusData = stats?.consultations_by_status || {};
+  const consultationCount = recentConsults.length;
+  const readyCount = recentConsults.filter(c => c.status === 'ready').length;
+  const inProgressCount = recentConsults.filter(c => ['processing', 'generating'].includes(c.status)).length;
+  const lastDate = recentConsults[0]?.created_at
+    ? new Date(recentConsults[0].created_at).toLocaleDateString('ru-RU')
+    : '—';
+  const pendingPlanCount = todayAppts.length;
 
   return (
     <SafeAreaView style={s.container}>
@@ -62,7 +69,7 @@ export default function DashboardScreen({ navigation }) {
           <View style={{ flex: 1 }}>
             <Text style={s.greeting}>Добро пожаловать,</Text>
             <Text style={s.name}>{displayName}!</Text>
-            <Text style={s.subtitle}>Обзор активности и статистики</Text>
+            <Text style={s.subtitle}>{isPatient ? 'Ваши консультации и обновления' : 'Обзор активности и статистики'}</Text>
           </View>
           {!isPatient && (
             <TouchableOpacity style={s.newBtn} onPress={() => navigation.navigate('RecordPage')}>
@@ -71,6 +78,64 @@ export default function DashboardScreen({ navigation }) {
             </TouchableOpacity>
           )}
         </View>
+
+        {isPatient && (
+          <View style={s.statGrid}>
+            <View style={[s.statCard, { borderLeftColor: PRIMARY }]}>
+              <Ionicons name="document-text-outline" size={24} color={PRIMARY} />
+              <Text style={s.statValue}>{consultationCount}</Text>
+              <Text style={s.statLabel}>Последних консультаций</Text>
+            </View>
+            <View style={[s.statCard, { borderLeftColor: '#22C55E' }]}>
+              <Ionicons name="checkmark-circle-outline" size={24} color="#22C55E" />
+              <Text style={s.statValue}>{readyCount}</Text>
+              <Text style={s.statLabel}>Готовых</Text>
+            </View>
+            <View style={[s.statCard, { borderLeftColor: '#F59E0B' }]}>
+              <Ionicons name="time-outline" size={24} color="#F59E0B" />
+              <Text style={s.statValue}>{inProgressCount}</Text>
+              <Text style={s.statLabel}>В обработке</Text>
+            </View>
+            <View style={[s.statCard, { borderLeftColor: '#3B82F6' }]}>
+              <Ionicons name="calendar-outline" size={24} color="#3B82F6" />
+              <Text style={s.statValue}>{lastDate}</Text>
+              <Text style={s.statLabel}>Последнее обновление</Text>
+            </View>
+          </View>
+        )}
+
+        {isPatient && (
+          <View style={s.section}>
+            <View style={s.sectionHeader}>
+              <Text style={s.sectionTitle}>Что можно сделать</Text>
+            </View>
+            <View style={s.actionGrid}>
+              <TouchableOpacity style={s.actionCard} onPress={() => navigation.navigate('Консультации')}>
+                <Ionicons name="folder-open-outline" size={22} color={PRIMARY} />
+                <Text style={s.actionTitle}>Открыть консультации</Text>
+                <Text style={s.actionText}>Посмотреть историю и статусы</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={s.actionCard} onPress={() => navigation.navigate('Чат-бот')}>
+                <Ionicons name="chatbubbles-outline" size={22} color={PRIMARY} />
+                <Text style={s.actionTitle}>Перейти в чат-бот</Text>
+                <Text style={s.actionText}>Задать вопросы боту-ассистенту</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={s.actionCard} onPress={() => navigation.navigate('Профиль')}>
+                <Ionicons name="person-circle-outline" size={22} color={PRIMARY} />
+                <Text style={s.actionTitle}>Проверить профиль</Text>
+                <Text style={s.actionText}>Контакты и данные аккаунта</Text>
+              </TouchableOpacity>
+
+              <View style={[s.actionCard, s.actionCardMuted]}>
+                <Ionicons name="notifications-outline" size={22} color="#64748b" />
+                <Text style={s.actionTitle}>Напоминания</Text>
+                <Text style={s.actionText}>Плановых событий: {pendingPlanCount}</Text>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* Stat Cards */}
         {!isPatient && stats && (
@@ -119,7 +184,7 @@ export default function DashboardScreen({ navigation }) {
         <View style={s.section}>
           <View style={s.sectionHeader}>
             <Text style={s.sectionTitle}>Последние консультации</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Архив')}>
+            <TouchableOpacity onPress={() => navigation.navigate(isPatient ? 'Консультации' : 'Архив')}>
               <Text style={s.seeAll}>Все →</Text>
             </TouchableOpacity>
           </View>
@@ -224,4 +289,23 @@ const s = StyleSheet.create({
   badgeText: { fontSize: 11, fontWeight: '600' },
   emptyCard: { backgroundColor: '#fff', borderRadius: 10, padding: 24, alignItems: 'center' },
   emptyText: { fontSize: 14, color: '#bbb' },
+  actionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  actionCard: {
+    width: '48%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  actionCardMuted: {
+    backgroundColor: '#f8fafc',
+  },
+  actionTitle: { marginTop: 8, fontSize: 13, fontWeight: '700', color: '#1a1a2e' },
+  actionText: { marginTop: 3, fontSize: 12, color: '#64748b' },
 });

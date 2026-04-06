@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -6,62 +6,12 @@ import {
     FlatList,
     TouchableOpacity,
     ActivityIndicator,
-    Animated,
-    Easing,
-    Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { apiFetch, safeJson } from '../api';
+import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 
 const MINT = '#2ec4b6';
-const MINT_LIGHT = '#5eead4';
-const MINT_DARK = '#14b8a6';
-const PURPLE = '#a78bfa';
-const { width: SW } = Dimensions.get('window');
-
-/* ── Animated floating blob ── */
-function FloatingBlob({ color, size, startX, startY, delay }) {
-    const translateX = useRef(new Animated.Value(0)).current;
-    const translateY = useRef(new Animated.Value(0)).current;
-    const scale = useRef(new Animated.Value(1)).current;
-
-    useEffect(() => {
-        Animated.loop(
-            Animated.sequence([
-                Animated.delay(delay),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: 80, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: -60, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 1.2, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: -50, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: 90, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 0.85, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: 60, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: 40, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 1.1, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: 0, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: 0, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 1, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-            ])
-        ).start();
-    }, []);
-
-    return (
-        <Animated.View style={{
-            position: 'absolute', left: startX, top: startY,
-            width: size, height: size, borderRadius: size / 2,
-            backgroundColor: color, opacity: 0.25,
-            transform: [{ translateX }, { translateY }, { scale }],
-        }} />
-    );
-}
 
 const TAB_HEIGHT = 65;
 
@@ -125,12 +75,7 @@ export default function ListScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <View style={styles.blobLayer} pointerEvents="none">
-                <FloatingBlob color={MINT} size={280} startX={-60} startY={30} delay={0} />
-                <FloatingBlob color={MINT_LIGHT} size={220} startX={SW - 130} startY={200} delay={2000} />
-                <FloatingBlob color={PURPLE} size={200} startX={20} startY={400} delay={4500} />
-                <FloatingBlob color={MINT_DARK} size={240} startX={SW - 180} startY={500} delay={7000} />
-            </View>
+            <AnimatedGradientBackground />
             <Text style={styles.title}>Последние записи</Text>
 
             {loading ? (
@@ -155,10 +100,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f8fafc',
-    },
-    blobLayer: {
-        ...StyleSheet.absoluteFillObject,
-        overflow: 'hidden',
     },
     title: {
         marginTop: 60,

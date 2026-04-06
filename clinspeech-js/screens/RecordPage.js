@@ -1,64 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     View, Text, TouchableOpacity, StyleSheet, FlatList,
-    TextInput, ActivityIndicator, Alert, Animated, Easing, Dimensions,
+    TextInput, ActivityIndicator, Alert, Animated, Easing,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { apiFetch, safeJson } from '../api';
+import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 
 const MINT = '#2ec4b6';
 const MINT_LIGHT = '#5eead4';
 const MINT_DARK = '#14b8a6';
 const MINT_BG = '#f0fdfa';
-const PURPLE = '#a78bfa';
-const { width: SW } = Dimensions.get('window');
-
-/* ── Animated floating blob ── */
-function FloatingBlob({ color, size, startX, startY, delay }) {
-    const translateX = useRef(new Animated.Value(0)).current;
-    const translateY = useRef(new Animated.Value(0)).current;
-    const scale = useRef(new Animated.Value(1)).current;
-
-    useEffect(() => {
-        Animated.loop(
-            Animated.sequence([
-                Animated.delay(delay),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: 80, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: -60, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 1.2, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: -50, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: 90, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 0.85, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: 60, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: 40, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 1.1, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: 0, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: 0, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 1, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-            ])
-        ).start();
-    }, []);
-
-    return (
-        <Animated.View style={{
-            position: 'absolute', left: startX, top: startY,
-            width: size, height: size, borderRadius: size / 2,
-            backgroundColor: color, opacity: 0.3,
-            transform: [{ translateX }, { translateY }, { scale }],
-        }} />
-    );
-}
 
 /* ── Pulsing ring during recording ── */
 function PulsingRing({ delay }) {
@@ -318,13 +273,7 @@ export default function RecordPage({ navigation }) {
 
     return (
         <View style={st.container}>
-            {/* Animated floating blobs on white background */}
-            <View style={st.blobLayer} pointerEvents="none">
-                <FloatingBlob color={MINT} size={280} startX={-60} startY={50} delay={0} />
-                <FloatingBlob color={MINT_LIGHT} size={220} startX={SW - 140} startY={200} delay={2000} />
-                <FloatingBlob color={PURPLE} size={200} startX={30} startY={400} delay={4000} />
-                <FloatingBlob color={MINT_DARK} size={240} startX={SW - 180} startY={500} delay={6000} />
-            </View>
+            <AnimatedGradientBackground />
 
             <SafeAreaView style={{ flex: 1 }}>
                 {/* Header */}
@@ -587,7 +536,6 @@ export default function RecordPage({ navigation }) {
 
 const st = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f8fafc' },
-    blobLayer: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10 },
     headerTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a2e' },
     steps: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, marginBottom: 20 },
