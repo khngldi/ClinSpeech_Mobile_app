@@ -179,7 +179,7 @@ export default function AuditLogScreen({ navigation }) {
 }
 
 const s = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f8fafc' },
+    container: { flex: 1 },
     safeArea: { flex: 1 },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     header: {

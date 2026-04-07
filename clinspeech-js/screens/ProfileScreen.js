@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiFetch, safeJson, BASE_URL } from '../api';
 import { useLocale } from '../i18n/LocaleContext';
+import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 
 const PRIMARY = '#2ec4b6';
 
@@ -120,6 +121,7 @@ export default function ProfileScreen({ navigation }) {
 
   if (loading) return (
     <View style={s.loadingContainer}>
+      <AnimatedGradientBackground />
       <ActivityIndicator size="large" color={PRIMARY} />
     </View>
   );
@@ -127,9 +129,11 @@ export default function ProfileScreen({ navigation }) {
   const initials = `${(profile?.first_name?.[0] || '').toUpperCase()}${(profile?.last_name?.[0] || '').toUpperCase()}`;
 
   return (
-    <SafeAreaView style={s.container}>
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={s.pageTitle}>{t('Профиль')}</Text>
+    <View style={s.container}>
+      <AnimatedGradientBackground />
+      <SafeAreaView style={s.safeArea}>
+        <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+          <Text style={s.pageTitle}>{t('Профиль')}</Text>
 
         {success ? (
           <View style={s.successBanner}>
@@ -234,6 +238,7 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </View>
       </ScrollView>
+      </SafeAreaView>
 
       {/* Password Modal */}
       <Modal visible={showPwd} animationType="slide" transparent>
@@ -265,13 +270,14 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f7fa' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f7fa' },
+  container: { flex: 1 },
+  safeArea: { flex: 1 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scroll: { paddingHorizontal: 16, paddingBottom: 100 },
   pageTitle: { fontSize: 24, fontWeight: '700', color: '#1a1a2e', marginTop: 10, marginBottom: 16 },
   successBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f0fdf4', padding: 12, borderRadius: 10, marginBottom: 12, gap: 8 },

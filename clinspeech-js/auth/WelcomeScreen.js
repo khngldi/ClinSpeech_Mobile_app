@@ -7,59 +7,14 @@ import {
     TouchableOpacity,
     Animated,
     Easing,
-    Dimensions,
 } from 'react-native';
 import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
+import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 
 const MINT = '#2ec4b6';
 const MINT_LIGHT = '#5eead4';
 const MINT_DARK = '#14b8a6';
 const PURPLE = '#a78bfa';
-const { width: SW } = Dimensions.get('window');
-
-/* ── Animated floating blob (like .animated-bg .blob) ── */
-function FloatingBlob({ color, size, startX, startY, delay }) {
-    const translateX = useRef(new Animated.Value(0)).current;
-    const translateY = useRef(new Animated.Value(0)).current;
-    const scale = useRef(new Animated.Value(1)).current;
-
-    useEffect(() => {
-        Animated.loop(
-            Animated.sequence([
-                Animated.delay(delay),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: 80, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: -60, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 1.2, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: -50, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: 90, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 0.85, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: 60, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: 40, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 1.1, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: 0, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: 0, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 1, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-            ])
-        ).start();
-    }, []);
-
-    return (
-        <Animated.View style={{
-            position: 'absolute', left: startX, top: startY,
-            width: size, height: size, borderRadius: size / 2,
-            backgroundColor: color, opacity: 0.25,
-            transform: [{ translateX }, { translateY }, { scale }],
-        }} />
-    );
-}
 
 // Компонент анимированной фигуры
 const FloatingShape = ({ icon, index }) => {
@@ -129,13 +84,7 @@ export default function WelcomeScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
-            {/* Animated gradient blobs */}
-            <View style={styles.blobLayer} pointerEvents="none">
-                <FloatingBlob color={MINT} size={300} startX={-80} startY={40} delay={0} />
-                <FloatingBlob color={MINT_LIGHT} size={260} startX={SW - 120} startY={180} delay={2000} />
-                <FloatingBlob color={PURPLE} size={220} startX={20} startY={450} delay={4500} />
-                <FloatingBlob color={MINT_DARK} size={280} startX={SW - 200} startY={550} delay={7000} />
-            </View>
+            <AnimatedGradientBackground />
 
             <View style={styles.content}>
 
@@ -192,19 +141,12 @@ export default function WelcomeScreen({ navigation }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8fafc',
-    },
-    blobLayer: {
-        ...StyleSheet.absoluteFillObject,
-        overflow: 'hidden',
     },
     content: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'space-around',
         paddingVertical: 50,
-        position: 'relative',
-        zIndex: 1,
     },
     title: {
         fontSize: 34,

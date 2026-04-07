@@ -370,7 +370,7 @@ const s = StyleSheet.create({
         alignItems: 'center',
         gap: 6,
         paddingHorizontal: 16,
-        paddingBottom: 40,
+        paddingBottom: 50,
         backgroundColor: 'rgba(255,255,255,0.9)',
     },
     disclaimerText: {

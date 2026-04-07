@@ -9,14 +9,20 @@ import {
     SafeAreaView,
     Dimensions,
     ActivityIndicator,
-    Alert
+    Alert,
+    Image,
+    Modal,
+    Platform,
+    Linking,
 } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons, MaterialIcons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
-import { apiFetch, safeJson } from '../api';
+import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
+import { apiFetch, safeJson, BASE_URL, getFreshToken } from '../api';
 import { useLocale } from '../i18n/LocaleContext';
 
 const PRIMARY_COLOR = '#2ec4b6';
-const { height: windowHeight } = Dimensions.get('window');
+const { width: SW, height: windowHeight } = Dimensions.get('window');
 
 const Accordion = ({ title, children, isOpenDefault = false }) => {
     const [isOpen, setIsOpen] = useState(isOpenDefault);
@@ -51,6 +57,19 @@ export default function DetailScreen({ navigation, route }) {
     const [loading, setLoading] = useState(true);
     const [editing, setEditing] = useState(false);
     const [editForm, setEditForm] = useState({});
+    const [user, setUser] = useState(null);
+    
+    // Gallery modal
+    const [galleryVisible, setGalleryVisible] = useState(false);
+    const [selectedImage, setSelectedImage] = useState(null);
+
+    // Load user role
+    useEffect(() => {
+        apiFetch('/me/').then(safeJson).then(setUser).catch(() => {});
+    }, []);
+
+    const isPatient = user?.role === 'patient';
+    const isDoctor = user?.role === 'doctor' || user?.role === 'admin';
 
     const load = useCallback(async () => {
         if (!consultationId) { setLoading(false); return; }
@@ -124,15 +143,120 @@ export default function DetailScreen({ navigation, route }) {
 
     const handleDownloadPDF = async () => {
         try {
-            const res = await apiFetch(`/consultations/${consultationId}/download_pdf/`);
-            if (!res.ok) { Alert.alert(t('Ошибка'), t('Ошибка')); return; }
-            Alert.alert('PDF', t('Скачать PDF'));
-        } catch { Alert.alert(t('Ошибка'), t('Ошибка')); }
+            // Get fresh token (auto-refresh if expired)
+            const token = await getFreshToken();
+            const pdfUrl = `${BASE_URL}/consultations/${consultationId}/download_pdf/`;
+            
+            Alert.alert(t('PDF скачивается...'), t('Пожалуйста, подождите'));
+            
+            const response = await fetch(pdfUrl, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+            
+            console.log('PDF response status:', response.status);
+            
+            if (response.ok) {
+                const blob = await response.blob();
+                const reader = new FileReader();
+                
+                reader.onloadend = async () => {
+                    try {
+                        const base64data = reader.result.split(',')[1];
+                        const filename = `consultation_${consultationId}.pdf`;
+                        const fileUri = FileSystem.documentDirectory + filename;
+                        
+                        await FileSystem.writeAsStringAsync(fileUri, base64data, {
+                            encoding: FileSystem.EncodingType.Base64,
+                        });
+                        
+                        // Open PDF with system viewer
+                        if (Platform.OS === 'android') {
+                            const contentUri = await FileSystem.getContentUriAsync(fileUri);
+                            await Linking.openURL(contentUri);
+                        } else {
+                            await Linking.openURL(fileUri);
+                        }
+                        Alert.alert(t('Успешно'), t('PDF открыт'));
+                    } catch (writeError) {
+                        console.error('Write error:', writeError);
+                        Alert.alert(t('Ошибка'), writeError.message);
+                    }
+                };
+                
+                reader.readAsDataURL(blob);
+            } else {
+                const errorText = await response.text();
+                console.error('PDF error:', response.status, errorText);
+                Alert.alert(t('Ошибка'), `${t('Не удалось скачать PDF')} (${response.status})`);
+            }
+        } catch (error) {
+            console.error('PDF download error:', error);
+            Alert.alert(t('Ошибка'), error.message || t('Не удалось скачать PDF'));
+        }
+    };
+
+    const handleSaveImage = async (imageUrl) => {
+        try {
+            const token = await getFreshToken();
+            const filename = `image_${Date.now()}.jpg`;
+            const fileUri = FileSystem.documentDirectory + filename;
+            
+            Alert.alert(t('Скачивание...'), t('Пожалуйста, подождите'));
+            
+            // Fetch image
+            const response = await fetch(imageUrl, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+            
+            if (response.ok) {
+                const blob = await response.blob();
+                const reader = new FileReader();
+                
+                reader.onloadend = async () => {
+                    try {
+                        const base64data = reader.result.split(',')[1];
+                        await FileSystem.writeAsStringAsync(fileUri, base64data, {
+                            encoding: FileSystem.EncodingType.Base64,
+                        });
+                        
+                        // Open image with system viewer
+                        if (Platform.OS === 'android') {
+                            const contentUri = await FileSystem.getContentUriAsync(fileUri);
+                            await Linking.openURL(contentUri);
+                        } else {
+                            await Linking.openURL(fileUri);
+                        }
+                        Alert.alert(t('Успешно'), t('Изображение открыто'));
+                    } catch (writeError) {
+                        console.error('Write error:', writeError);
+                        Alert.alert(t('Ошибка'), writeError.message);
+                    }
+                };
+                
+                reader.readAsDataURL(blob);
+            } else {
+                Alert.alert(t('Ошибка'), t('Не удалось скачать изображение'));
+            }
+        } catch (error) {
+            console.error('Save image error:', error);
+            Alert.alert(t('Ошибка'), t('Не удалось сохранить изображение'));
+        }
+    };
+
+    const openGallery = (img) => {
+        setSelectedImage(img);
+        setGalleryVisible(true);
     };
 
     if (loading) {
         return (
             <View style={[styles.mainWrapper, { justifyContent: 'center', alignItems: 'center' }]}>
+                <AnimatedGradientBackground />
                 <ActivityIndicator size="large" color={PRIMARY_COLOR} />
             </View>
         );
@@ -141,6 +265,7 @@ export default function DetailScreen({ navigation, route }) {
     if (!data) {
         return (
             <View style={[styles.mainWrapper, { justifyContent: 'center', alignItems: 'center' }]}>
+                <AnimatedGradientBackground />
                 <Text style={{ fontSize: 16, color: '#999' }}>{t('Нет консультаций')}</Text>
             </View>
         );
@@ -161,6 +286,7 @@ export default function DetailScreen({ navigation, route }) {
 
     return (
         <View style={styles.mainWrapper}>
+            <AnimatedGradientBackground />
             <SafeAreaView style={styles.safeArea}>
                 <ScrollView
                     style={styles.scrollView}
@@ -175,7 +301,8 @@ export default function DetailScreen({ navigation, route }) {
                         </TouchableOpacity>
                         <Text style={styles.headerTitle} numberOfLines={1}>{patientName}</Text>
                         <View style={styles.headerIcons}>
-                            {status === 'ready' && (
+                            {/* Only doctors can edit reports */}
+                            {status === 'ready' && isDoctor && (
                                 <TouchableOpacity style={styles.iconButton} onPress={() => setEditing(!editing)}>
                                     <Ionicons name={editing ? "close-outline" : "create-outline"} size={24} color={PRIMARY_COLOR} />
                                 </TouchableOpacity>
@@ -196,104 +323,173 @@ export default function DetailScreen({ navigation, route }) {
                         <View style={styles.processingCard}>
                             <ActivityIndicator size="large" color={PRIMARY_COLOR} style={{ marginBottom: 12 }} />
                             <Text style={styles.processingTitle}>
-                                {status === 'processing' ? 'Транскрибация аудио...' : 'Генерация ИИ-отчёта...'}
+                                {status === 'processing' ? t('Транскрибация аудио...') : t('Генерация ИИ-отчёта...')}
                             </Text>
-                            <Text style={styles.processingSubtitle}>Пожалуйста, подождите. Обновление происходит автоматически.</Text>
+                            <Text style={styles.processingSubtitle}>{t('Пожалуйста, подождите. Обновление происходит автоматически.')}</Text>
                         </View>
                     )}
 
                     {/* --- ACCORDIONS --- */}
-                    <Accordion title="Общие данные" isOpenDefault={true}>
-                        <Text style={styles.bodyText}>ФИО: {patientName}</Text>
-                        <Text style={styles.bodyText}>ИИН: {patient.iin || '—'}</Text>
-                        <Text style={styles.bodyText}>Дата: {formattedDate}</Text>
-                        <Text style={styles.bodyText}>Врач: {data.doctor_name || '—'}</Text>
-                        <Text style={styles.bodyText}>Снимков: {data.images_count || 0}</Text>
+                    <Accordion title={t('Общие данные')} isOpenDefault={true}>
+                        <Text style={styles.bodyText}>{t('ФИО')}: {patientName}</Text>
+                        <Text style={styles.bodyText}>{t('ИИН')}: {patient.iin || '—'}</Text>
+                        <Text style={styles.bodyText}>{t('Дата')}: {formattedDate}</Text>
+                        <Text style={styles.bodyText}>{t('Врач')}: {data.doctor_name || '—'}</Text>
+                        <Text style={styles.bodyText}>{t('Снимков')}: {data.images_count || 0}</Text>
                     </Accordion>
 
-                    <Accordion title="Транскрипция">
-                        <Text style={styles.bodyText}>{data.raw_transcription || 'Транскрипция пока отсутствует'}</Text>
+                    <Accordion title={t('Транскрипция')}>
+                        <Text style={styles.bodyText}>{data.raw_transcription || t('Транскрипция пока отсутствует')}</Text>
                     </Accordion>
 
-                    <Accordion title="Жалобы пациента">
+                    <Accordion title={t('Жалобы пациента')}>
                         {editing ? (
-                            <TextInput style={styles.editInput} value={editForm.complaints || ''} onChangeText={(t) => setEditForm({...editForm, complaints: t})} multiline placeholder="Жалобы пациента" />
+                            <TextInput style={styles.editInput} value={editForm.complaints || ''} onChangeText={(txt) => setEditForm({...editForm, complaints: txt})} multiline placeholder={t('Жалобы пациента')} />
                         ) : (
                             <Text style={styles.bodyText}>{report.complaints || '—'}</Text>
                         )}
                     </Accordion>
 
-                    <Accordion title="Анамнез заболевания">
+                    <Accordion title={t('Анамнез заболевания')}>
                         {editing ? (
-                            <TextInput style={styles.editInput} value={editForm.anamnesis || ''} onChangeText={(t) => setEditForm({...editForm, anamnesis: t})} multiline placeholder="Анамнез заболевания" />
+                            <TextInput style={styles.editInput} value={editForm.anamnesis || ''} onChangeText={(txt) => setEditForm({...editForm, anamnesis: txt})} multiline placeholder={t('Анамнез заболевания')} />
                         ) : (
                             <Text style={styles.bodyText}>{report.anamnesis || '—'}</Text>
                         )}
                     </Accordion>
 
-                    <Accordion title="Предварительный диагноз">
+                    <Accordion title={t('Предварительный диагноз')}>
                         {editing ? (
-                            <TextInput style={styles.editInput} value={editForm.diagnosis || ''} onChangeText={(t) => setEditForm({...editForm, diagnosis: t})} multiline placeholder="Предварительный диагноз" />
+                            <TextInput style={styles.editInput} value={editForm.diagnosis || ''} onChangeText={(txt) => setEditForm({...editForm, diagnosis: txt})} multiline placeholder={t('Предварительный диагноз')} />
                         ) : (
                             <Text style={styles.bodyText}>{report.diagnosis || '—'}</Text>
                         )}
                     </Accordion>
 
-                    <Accordion title="Назначения и рекомендации">
+                    <Accordion title={t('Назначения и рекомендации')}>
                         {editing ? (
-                            <TextInput style={styles.editInput} value={editForm.recommendations || ''} onChangeText={(t) => setEditForm({...editForm, recommendations: t})} multiline placeholder="Назначения и рекомендации" />
+                            <TextInput style={styles.editInput} value={editForm.recommendations || ''} onChangeText={(txt) => setEditForm({...editForm, recommendations: txt})} multiline placeholder={t('Назначения и рекомендации')} />
                         ) : (
                             <Text style={styles.bodyText}>{report.recommendations || '—'}</Text>
                         )}
                     </Accordion>
 
-                    <Accordion title={`Снимки (${data.images_count || 0})`}>
+                    <Accordion title={`${t('Снимки')} (${data.images_count || 0})`}>
                         {(!data.analysis_images || data.analysis_images.length === 0) ? (
-                            <Text style={styles.bodyText}>Нет снимков</Text>
+                            <Text style={styles.bodyText}>{t('Нет снимков')}</Text>
                         ) : (
-                            data.analysis_images.map((img) => (
-                                <Text key={img.id} style={styles.bodyText}>• {img.description || 'Снимок'}</Text>
-                            ))
+                            <View style={styles.imageGallery}>
+                                {data.analysis_images.map((img) => {
+                                    const imageUrl = img.image?.startsWith('http') 
+                                        ? img.image 
+                                        : `${BASE_URL}${img.image}`;
+                                    return (
+                                        <TouchableOpacity 
+                                            key={img.id} 
+                                            style={styles.imageThumb}
+                                            onPress={() => openGallery(img)}
+                                        >
+                                            <Image 
+                                                source={{ uri: imageUrl }} 
+                                                style={styles.thumbImage}
+                                                resizeMode="cover"
+                                            />
+                                            <Text style={styles.imageDescription} numberOfLines={1}>
+                                                {img.description || t('Снимок')}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
                         )}
                     </Accordion>
 
-                    {/* --- EDIT SAVE/CANCEL --- */}
-                    {editing && (
+                    {/* --- EDIT SAVE/CANCEL (only doctors) --- */}
+                    {editing && isDoctor && (
                         <View style={styles.actionRow}>
                             <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#32CD32' }]} onPress={handleSaveReport}>
-                                <Text style={styles.actionButtonText}>СОХРАНИТЬ</Text>
+                                <Text style={styles.actionButtonText}>{t('СОХРАНИТЬ')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#999' }]} onPress={() => setEditing(false)}>
-                                <Text style={styles.actionButtonText}>ОТМЕНА</Text>
+                                <Text style={styles.actionButtonText}>{t('ОТМЕНА')}</Text>
                             </TouchableOpacity>
                         </View>
                     )}
 
                     {/* --- BOTTOM ACTIONS --- */}
                     <View style={styles.actionRow}>
-                        {status === 'created' && (
+                        {/* Start processing - only doctors */}
+                        {status === 'created' && isDoctor && (
                             <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#32CD32' }]} onPress={handleStartProcessing}>
-                                <Text style={styles.actionButtonText}>▶ ЗАПУСТИТЬ</Text>
+                                <Text style={styles.actionButtonText}>▶ {t('ЗАПУСТИТЬ')}</Text>
                             </TouchableOpacity>
                         )}
                         {status === 'ready' && (
                             <>
                                 <TouchableOpacity style={styles.actionButton} onPress={handleDownloadPDF}>
-                                    <Text style={styles.actionButtonText}>СКАЧАТЬ PDF</Text>
+                                    <Text style={styles.actionButtonText}>{t('СКАЧАТЬ PDF')}</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#F39C12' }]} onPress={handleRegenerate}>
-                                    <Text style={styles.actionButtonText}>ПЕРЕГЕНЕРИРОВАТЬ</Text>
-                                </TouchableOpacity>
+                                {/* Regenerate - only doctors */}
+                                {isDoctor && (
+                                    <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#F39C12' }]} onPress={handleRegenerate}>
+                                        <Text style={styles.actionButtonText}>{t('ПЕРЕГЕНЕРИРОВАТЬ')}</Text>
+                                    </TouchableOpacity>
+                                )}
                             </>
                         )}
-                        {status === 'error' && (
+                        {/* Retry on error - only doctors */}
+                        {status === 'error' && isDoctor && (
                             <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#F39C12' }]} onPress={handleStartProcessing}>
-                                <Text style={styles.actionButtonText}>ПОВТОРИТЬ</Text>
+                                <Text style={styles.actionButtonText}>{t('ПОВТОРИТЬ')}</Text>
                             </TouchableOpacity>
                         )}
                     </View>
                 </ScrollView>
             </SafeAreaView>
+
+            {/* Image Gallery Modal */}
+            <Modal
+                visible={galleryVisible}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setGalleryVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>{selectedImage?.description || t('Снимок')}</Text>
+                            <TouchableOpacity onPress={() => setGalleryVisible(false)}>
+                                <Ionicons name="close" size={28} color="#333" />
+                            </TouchableOpacity>
+                        </View>
+                        
+                        {selectedImage && (
+                            <Image 
+                                source={{ 
+                                    uri: selectedImage.image?.startsWith('http') 
+                                        ? selectedImage.image 
+                                        : `${BASE_URL}${selectedImage.image}` 
+                                }}
+                                style={styles.fullImage}
+                                resizeMode="contain"
+                            />
+                        )}
+                        
+                        <TouchableOpacity 
+                            style={styles.downloadButton}
+                            onPress={() => {
+                                const imageUrl = selectedImage?.image?.startsWith('http') 
+                                    ? selectedImage.image 
+                                    : `${BASE_URL}${selectedImage?.image}`;
+                                handleSaveImage(imageUrl);
+                            }}
+                        >
+                            <Ionicons name="download-outline" size={22} color="#fff" />
+                            <Text style={styles.downloadButtonText}>{t('Сохранить в галерею')}</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -302,11 +498,9 @@ const styles = StyleSheet.create({
     mainWrapper: {
         flex: 1,
         height: '100%',
-        backgroundColor: '#FFFFFF',
     },
     safeArea: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
     },
     scrollView: {
         flex: 1,
@@ -532,5 +726,80 @@ const styles = StyleSheet.create({
         backgroundColor: PRIMARY_COLOR,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    // Image Gallery styles
+    imageGallery: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 10,
+    },
+    imageThumb: {
+        width: '30%',
+        aspectRatio: 1,
+        borderRadius: 8,
+        overflow: 'hidden',
+        backgroundColor: '#f0f0f0',
+    },
+    thumbImage: {
+        width: '100%',
+        height: '80%',
+        borderTopLeftRadius: 8,
+        borderTopRightRadius: 8,
+    },
+    imageDescription: {
+        fontSize: 10,
+        color: '#666',
+        textAlign: 'center',
+        paddingHorizontal: 4,
+        paddingVertical: 2,
+        backgroundColor: '#fff',
+    },
+    // Modal styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.85)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContent: {
+        width: '90%',
+        maxHeight: '85%',
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        overflow: 'hidden',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#333',
+        flex: 1,
+    },
+    fullImage: {
+        width: '100%',
+        height: 300,
+        backgroundColor: '#f5f5f5',
+    },
+    downloadButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: PRIMARY_COLOR,
+        margin: 16,
+        paddingVertical: 14,
+        borderRadius: 10,
+        gap: 8,
+    },
+    downloadButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
     },
 });

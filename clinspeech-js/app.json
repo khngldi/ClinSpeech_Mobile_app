@@ -19,7 +19,8 @@
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
         },
-        "NSMicrophoneUsageDescription": "ClinSpeech нуждается в доступе к микрофону для записи приёмов"
+        "NSMicrophoneUsageDescription": "ClinSpeech нуждается в доступе к микрофону для записи приёмов",
+        "NSPhotoLibraryUsageDescription": "ClinSpeech нуждается в доступе к галерее для сохранения изображений"
       }
     },
     "android": {
@@ -29,7 +30,12 @@
       },
       "edgeToEdgeEnabled": true,
       "usesCleartextTraffic": true,
-      "permissions": ["RECORD_AUDIO"]
+      "permissions": [
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
+      ]
     },
     "plugins": [
       "@react-native-community/datetimepicker",
@@ -37,6 +43,14 @@
         "expo-av",
         {
           "microphonePermission": "ClinSpeech нуждается в доступе к микрофону для записи приёмов"
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "ClinSpeech нуждается в доступе к галерее для сохранения снимков",
+          "savePhotosPermission": "ClinSpeech нуждается в доступе для сохранения снимков в галерею",
+          "isAccessMediaLocationEnabled": true
         }
       ]
     ]

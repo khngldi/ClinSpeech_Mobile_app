@@ -24,7 +24,7 @@ const TYPE_ICONS = {
     default: { name: 'notifications', color: '#64748b' },
 };
 
-export default function NotificationsScreen() {
+export default function NotificationsScreen({ navigation }) {
     const { t } = useLocale();
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -141,7 +141,10 @@ export default function NotificationsScreen() {
             <AnimatedGradientBackground />
             <SafeAreaView style={s.safeArea}>
                 <View style={s.header}>
-                    <View>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
+                        <Ionicons name="chevron-back" size={28} color="#333" />
+                    </TouchableOpacity>
+                    <View style={s.headerContent}>
                         <Text style={s.title}>{t('Уведомления')}</Text>
                         <Text style={s.subtitle}>
                             {unreadCount > 0 
@@ -191,13 +194,19 @@ const s = StyleSheet.create({
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
+        alignItems: 'center',
         paddingHorizontal: 16,
         paddingTop: 10,
         paddingBottom: 16,
     },
-    title: { fontSize: 26, fontWeight: '700', color: '#1a1a2e' },
-    subtitle: { marginTop: 4, fontSize: 13, color: '#64748b' },
+    backBtn: {
+        marginRight: 8,
+    },
+    headerContent: {
+        flex: 1,
+    },
+    title: { fontSize: 22, fontWeight: '700', color: '#1a1a2e' },
+    subtitle: { marginTop: 2, fontSize: 13, color: '#64748b' },
     markAllBtn: {
         paddingHorizontal: 12,
         paddingVertical: 8,

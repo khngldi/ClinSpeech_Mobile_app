@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 import { apiFetch, safeJson } from '../api';
 import { useLocale } from '../i18n/LocaleContext';
 
@@ -49,6 +50,7 @@ export default function DashboardScreen({ navigation }) {
 
   if (loading) return (
     <View style={s.loadingContainer}>
+      <AnimatedGradientBackground />
       <ActivityIndicator size="large" color={PRIMARY} />
     </View>
   );
@@ -58,8 +60,10 @@ export default function DashboardScreen({ navigation }) {
   const statusData = stats?.consultations_by_status || {};
 
   return (
-    <SafeAreaView style={s.container}>
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+    <View style={{ flex: 1 }}>
+      <AnimatedGradientBackground />
+      <SafeAreaView style={s.container}>
+        <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={s.header}>
           <View style={{ flex: 1 }}>
@@ -190,12 +194,13 @@ export default function DashboardScreen({ navigation }) {
         )}
       </ScrollView>
     </SafeAreaView>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f7fa' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f7fa' },
+  container: { flex: 1 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scroll: { paddingHorizontal: 16, paddingBottom: 100 },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginTop: 10, marginBottom: 20 },
   greeting: { fontSize: 16, color: '#888' },

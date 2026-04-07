@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     View, Text, TouchableOpacity, StyleSheet, FlatList,
-    TextInput, ActivityIndicator, Alert, Animated, Easing, Dimensions,
+    TextInput, ActivityIndicator, Alert, Animated, Easing, Dimensions, Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
+import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 import { apiFetch, safeJson } from '../api';
+import { useLocale } from '../i18n/LocaleContext';
 
 const MINT = '#2ec4b6';
 const MINT_LIGHT = '#5eead4';
@@ -15,50 +17,6 @@ const MINT_DARK = '#14b8a6';
 const MINT_BG = '#f0fdfa';
 const PURPLE = '#a78bfa';
 const { width: SW } = Dimensions.get('window');
-
-/* ── Animated floating blob ── */
-function FloatingBlob({ color, size, startX, startY, delay }) {
-    const translateX = useRef(new Animated.Value(0)).current;
-    const translateY = useRef(new Animated.Value(0)).current;
-    const scale = useRef(new Animated.Value(1)).current;
-
-    useEffect(() => {
-        Animated.loop(
-            Animated.sequence([
-                Animated.delay(delay),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: 80, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: -60, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 1.2, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: -50, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: 90, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 0.85, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: 60, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: 40, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 1.1, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: 0, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: 0, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 1, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-            ])
-        ).start();
-    }, []);
-
-    return (
-        <Animated.View style={{
-            position: 'absolute', left: startX, top: startY,
-            width: size, height: size, borderRadius: size / 2,
-            backgroundColor: color, opacity: 0.3,
-            transform: [{ translateX }, { translateY }, { scale }],
-        }} />
-    );
-}
 
 /* ── Pulsing ring during recording ── */
 function PulsingRing({ delay }) {
@@ -92,6 +50,7 @@ function PulsingRing({ delay }) {
 }
 
 export default function RecordPage({ navigation }) {
+    const { t } = useLocale();
     const [step, setStep] = useState(1);
     const [patients, setPatients] = useState([]);
     const [patientsLoading, setPatientsLoading] = useState(true);
@@ -107,7 +66,7 @@ export default function RecordPage({ navigation }) {
     const [micError, setMicError] = useState('');
     const timerRef = useRef(null);
 
-    const WAVES = 8;
+    const WAVES = 20;
     const waveAnims = useRef(
         [...Array(WAVES)].map(() => new Animated.Value(0.3))
     ).current;
@@ -165,11 +124,11 @@ export default function RecordPage({ navigation }) {
                 setMicError('');
                 return true;
             } else {
-                setMicError('Разрешение на микрофон не предоставлено. Проверьте настройки.');
+                setMicError(t('Разрешение на микрофон не предоставлено. Проверьте настройки.'));
                 return false;
             }
         } catch (e) {
-            setMicError('Не удалось запросить разрешение на микрофон');
+            setMicError(t('Не удалось запросить разрешение на микрофон'));
             return false;
         }
     };
@@ -179,20 +138,20 @@ export default function RecordPage({ navigation }) {
             const loop = () => {
                 Animated.sequence([
                     Animated.timing(anim, {
-                        toValue: 0.3 + Math.random() * 0.7,
-                        duration: 200 + Math.random() * 300,
-                        easing: Easing.inOut(Easing.ease),
+                        toValue: 0.4 + Math.random() * 0.6,
+                        duration: 150 + Math.random() * 250,
+                        easing: Easing.inOut(Easing.sin),
                         useNativeDriver: false,
                     }),
                     Animated.timing(anim, {
-                        toValue: 0.2 + Math.random() * 0.3,
-                        duration: 200 + Math.random() * 300,
-                        easing: Easing.inOut(Easing.ease),
+                        toValue: 0.15 + Math.random() * 0.25,
+                        duration: 150 + Math.random() * 250,
+                        easing: Easing.inOut(Easing.sin),
                         useNativeDriver: false,
                     }),
                 ]).start(loop);
             };
-            setTimeout(loop, i * 60);
+            setTimeout(loop, i * 40);
         });
     };
 
@@ -226,7 +185,7 @@ export default function RecordPage({ navigation }) {
             timerRef.current = setInterval(() => setDuration(d => d + 1), 1000);
             startWaveAnimation();
         } catch (e) {
-            setMicError('Не удалось запустить запись. Проверьте доступность микрофона.');
+            setMicError(t('Не удалось запустить запись. Проверьте доступность микрофона.'));
         }
     };
 
@@ -237,7 +196,7 @@ export default function RecordPage({ navigation }) {
             setIsPaused(true);
             clearInterval(timerRef.current);
             stopWaveAnimation();
-        } catch (e) { setMicError('Ошибка при паузе записи'); }
+        } catch (e) { setMicError(t('Ошибка при паузе записи')); }
     };
 
     const resumeRecording = async () => {
@@ -247,7 +206,7 @@ export default function RecordPage({ navigation }) {
             setIsPaused(false);
             timerRef.current = setInterval(() => setDuration(d => d + 1), 1000);
             startWaveAnimation();
-        } catch (e) { setMicError('Ошибка при возобновлении записи'); }
+        } catch (e) { setMicError(t('Ошибка при возобновлении записи')); }
     };
 
     const stopRecording = async () => {
@@ -262,7 +221,7 @@ export default function RecordPage({ navigation }) {
             setIsPaused(false);
             setRecording(null);
             await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
-        } catch (e) { setMicError('Ошибка при остановке записи'); }
+        } catch (e) { setMicError(t('Ошибка при остановке записи')); }
     };
 
     const resetRecording = () => {
@@ -295,19 +254,19 @@ export default function RecordPage({ navigation }) {
             const res = await apiFetch('/consultations/', { method: 'POST', body: formData });
             if (!res.ok) {
                 const d = await safeJson(res);
-                throw new Error(typeof d === 'object' ? JSON.stringify(d) : 'Ошибка создания консультации');
+                throw new Error(typeof d === 'object' ? JSON.stringify(d) : t('Ошибка создания консультации'));
             }
             const data = await safeJson(res);
             if (autoProcess && data.id) {
                 try { await apiFetch(`/consultations/${data.id}/start_processing/`, { method: 'POST' }); } catch {}
             }
-            Alert.alert('Успешно', 'Консультация создана', [
+            Alert.alert(t('Успешно'), t('Консультация создана'), [
                 { text: 'OK', onPress: () => {
                     navigation.navigate('MainTabs', { screen: 'Главная', params: { screen: 'HomeList' } });
                 }}
             ]);
         } catch (err) {
-            setError(err.message || 'Ошибка отправки');
+            setError(err.message || t('Ошибка отправки'));
         } finally { setUploading(false); }
     };
 
@@ -318,13 +277,7 @@ export default function RecordPage({ navigation }) {
 
     return (
         <View style={st.container}>
-            {/* Animated floating blobs on white background */}
-            <View style={st.blobLayer} pointerEvents="none">
-                <FloatingBlob color={MINT} size={280} startX={-60} startY={50} delay={0} />
-                <FloatingBlob color={MINT_LIGHT} size={220} startX={SW - 140} startY={200} delay={2000} />
-                <FloatingBlob color={PURPLE} size={200} startX={30} startY={400} delay={4000} />
-                <FloatingBlob color={MINT_DARK} size={240} startX={SW - 180} startY={500} delay={6000} />
-            </View>
+            <AnimatedGradientBackground />
 
             <SafeAreaView style={{ flex: 1 }}>
                 {/* Header */}
@@ -332,7 +285,7 @@ export default function RecordPage({ navigation }) {
                     <TouchableOpacity onPress={() => navigation.goBack()}>
                         <Ionicons name="chevron-back" size={28} color="#1a1a2e" />
                     </TouchableOpacity>
-                    <Text style={st.headerTitle}>Новая запись</Text>
+                    <Text style={st.headerTitle}>{t('Новая запись')}</Text>
                     <View style={{ width: 28 }} />
                 </View>
 
@@ -344,7 +297,7 @@ export default function RecordPage({ navigation }) {
                                 <Text style={[st.stepNum, step >= s && { color: '#fff' }]}>{s}</Text>
                             </View>
                             <Text style={[st.stepLabel, step >= s && { color: MINT_DARK }]}>
-                                {{ 1: 'Пациент', 2: 'Запись', 3: 'Отправка' }[s]}
+                                {{ 1: t('Пациент'), 2: t('Запись'), 3: t('Отправка') }[s]}
                             </Text>
                             {s < 3 && <View style={[st.stepLine, step > s && st.stepLineActive]} />}
                         </View>
@@ -362,13 +315,13 @@ export default function RecordPage({ navigation }) {
                 {step === 1 && (
                     <View style={st.stepContent}>
                         <View style={st.card}>
-                            <Text style={st.cardTitle}>Выберите пациента</Text>
-                            <Text style={st.cardSubtitle}>Для начала записи приёма</Text>
+                            <Text style={st.cardTitle}>{t('Выберите пациента')}</Text>
+                            <Text style={st.cardSubtitle}>{t('Для начала записи приёма')}</Text>
                             <View style={st.searchBar}>
                                 <Ionicons name="search" size={16} color={MINT} />
                                 <TextInput
                                     style={st.searchInput}
-                                    placeholder="Поиск по ФИО..."
+                                    placeholder={t('Поиск по ФИО...')}
                                     placeholderTextColor="#999"
                                     value={patientSearch}
                                     onChangeText={setPatientSearch}
@@ -382,7 +335,7 @@ export default function RecordPage({ navigation }) {
                                     keyExtractor={item => String(item.id)}
                                     style={{ maxHeight: 300 }}
                                     showsVerticalScrollIndicator={false}
-                                    ListEmptyComponent={<Text style={st.emptyText}>Пациенты не найдены</Text>}
+                                    ListEmptyComponent={<Text style={st.emptyText}>{t('Пациенты не найдены')}</Text>}
                                     renderItem={({ item }) => (
                                         <TouchableOpacity
                                             style={[st.patientItem, patientId === item.id && st.patientSelected]}
@@ -392,7 +345,7 @@ export default function RecordPage({ navigation }) {
                                                 <Text style={st.patientName}>
                                                     {item.last_name} {item.first_name} {item.middle_name || ''}
                                                 </Text>
-                                                <Text style={st.patientMeta}>Дата рождения: {item.birth_date || '—'}</Text>
+                                                <Text style={st.patientMeta}>{t('Дата рождения:')} {item.birth_date || '—'}</Text>
                                             </View>
                                             {patientId === item.id && (
                                                 <Ionicons name="checkmark-circle" size={22} color={MINT} />
@@ -408,13 +361,13 @@ export default function RecordPage({ navigation }) {
                             onPress={() => setStep(2)}
                         >
                             <LinearGradient colors={[MINT, MINT_DARK]} style={st.nextBtnGrad}>
-                                <Text style={st.nextBtnText}>Далее →</Text>
+                                <Text style={st.nextBtnText}>{t('Далее →')}</Text>
                             </LinearGradient>
                         </TouchableOpacity>
                     </View>
                 )}
 
-                {/* ── Step 2: Shazam-style Recording ── */}
+                {/* ── Step 2: Modern Recording with Main_Button.png ── */}
                 {step === 2 && (
                     <View style={st.recordContainer}>
                         {!audioUri ? (
@@ -433,25 +386,26 @@ export default function RecordPage({ navigation }) {
                                         </>
                                     )}
 
-                                    {/* Wave bars around center */}
-                                    <View style={st.waveBarsRow}>
+                                    {/* Modern wave visualization */}
+                                    <View style={st.waveContainer}>
                                         {waveAnims.map((anim, i) => (
                                             <Animated.View
                                                 key={i}
                                                 style={[st.waveBar, {
                                                     height: anim.interpolate({
                                                         inputRange: [0, 1],
-                                                        outputRange: [8, 70],
+                                                        outputRange: [4, 50],
                                                     }),
                                                     backgroundColor: isRecording && !isPaused
-                                                        ? (i % 2 === 0 ? MINT : MINT_LIGHT)
-                                                        : 'rgba(46,196,182,0.2)',
+                                                        ? MINT
+                                                        : 'rgba(46,196,182,0.15)',
+                                                    opacity: isRecording && !isPaused ? 1 : 0.5,
                                                 }]}
                                             />
                                         ))}
                                     </View>
 
-                                    {/* Central mic button */}
+                                    {/* Central mic button with Main_Button.png */}
                                     <Animated.View style={{ transform: [{ scale: btnPulse }] }}>
                                         <TouchableOpacity
                                             style={[st.shazamBtn, isRecording && st.shazamBtnRecording]}
@@ -459,22 +413,16 @@ export default function RecordPage({ navigation }) {
                                             disabled={isRecording}
                                             activeOpacity={0.8}
                                         >
-                                            <LinearGradient
-                                                colors={isRecording ? [MINT, MINT_DARK] : [MINT_BG, '#fff']}
-                                                style={st.shazamBtnGrad}
-                                            >
-                                                <Ionicons
-                                                    name="mic"
-                                                    size={40}
-                                                    color={isRecording ? '#fff' : MINT}
-                                                />
-                                            </LinearGradient>
+                                            <Image
+                                                source={require('../assets/Main_Button.png')}
+                                                style={st.mainButtonImage}
+                                            />
                                         </TouchableOpacity>
                                     </Animated.View>
                                 </View>
 
                                 <Text style={st.shazamHint}>
-                                    {isRecording ? (isPaused ? 'На паузе' : 'Идёт запись...') : 'Нажмите для начала записи'}
+                                    {isRecording ? (isPaused ? t('На паузе') : t('Идёт запись...')) : t('Нажмите для начала записи')}
                                 </Text>
 
                                 {/* Controls */}
@@ -485,14 +433,14 @@ export default function RecordPage({ navigation }) {
                                             onPress={isPaused ? resumeRecording : pauseRecording}
                                         >
                                             <Ionicons name={isPaused ? 'play' : 'pause'} size={22} color={MINT_DARK} />
-                                            <Text style={st.shazamCtrlText}>{isPaused ? 'Продолжить' : 'Пауза'}</Text>
+                                            <Text style={st.shazamCtrlText}>{isPaused ? t('Продолжить') : t('Пауза')}</Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity
                                             style={[st.shazamCtrlBtn, st.shazamStopBtn]}
                                             onPress={stopRecording}
                                         >
                                             <Ionicons name="stop" size={22} color="#EF4444" />
-                                            <Text style={[st.shazamCtrlText, { color: '#EF4444' }]}>Остановить</Text>
+                                            <Text style={[st.shazamCtrlText, { color: '#EF4444' }]}>{t('Остановить')}</Text>
                                         </TouchableOpacity>
                                     </View>
                                 )}
@@ -504,7 +452,7 @@ export default function RecordPage({ navigation }) {
 
                                 <View style={st.recordedBadge}>
                                     <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
-                                    <Text style={st.recordedText}>Запись готова</Text>
+                                    <Text style={st.recordedText}>{t('Запись завершена')}</Text>
                                 </View>
 
                                 {/* Play button */}
@@ -517,21 +465,21 @@ export default function RecordPage({ navigation }) {
                                 <View style={st.shazamControls}>
                                     <TouchableOpacity style={st.shazamCtrlBtn} onPress={resetRecording}>
                                         <Ionicons name="refresh" size={20} color={MINT_DARK} />
-                                        <Text style={st.shazamCtrlText}>Перезаписать</Text>
+                                        <Text style={st.shazamCtrlText}>{t('Отменить')}</Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity
                                         style={[st.shazamCtrlBtn, st.shazamNextBtn]}
                                         onPress={() => setStep(3)}
                                     >
                                         <Ionicons name="arrow-forward" size={20} color="#fff" />
-                                        <Text style={[st.shazamCtrlText, { color: '#fff' }]}>Далее</Text>
+                                        <Text style={[st.shazamCtrlText, { color: '#fff' }]}>{t('Готово → Отправить')}</Text>
                                     </TouchableOpacity>
                                 </View>
                             </>
                         )}
 
                         <TouchableOpacity style={st.backBtnFloat} onPress={() => { stopRecording(); resetRecording(); setStep(1); }}>
-                            <Text style={st.backBtnText}>← Назад</Text>
+                            <Text style={st.backBtnText}>{t('← Назад')}</Text>
                         </TouchableOpacity>
                     </View>
                 )}
@@ -540,23 +488,23 @@ export default function RecordPage({ navigation }) {
                 {step === 3 && (
                     <View style={st.stepContent}>
                         <View style={st.card}>
-                            <Text style={st.cardTitle}>Подтверждение</Text>
+                            <Text style={st.cardTitle}>{t('Подтвердите отправку')}</Text>
 
                             <View style={st.confirmItem}>
-                                <Text style={st.confirmLabel}>Пациент</Text>
+                                <Text style={st.confirmLabel}>{t('Пациент:')}</Text>
                                 <Text style={st.confirmValue}>
                                     {selectedPatient ? `${selectedPatient.last_name} ${selectedPatient.first_name}` : '—'}
                                 </Text>
                             </View>
 
                             <View style={st.confirmItem}>
-                                <Text style={st.confirmLabel}>Длительность записи</Text>
+                                <Text style={st.confirmLabel}>{t('Длительность:')}</Text>
                                 <Text style={st.confirmValue}>{formatTime(duration)}</Text>
                             </View>
 
                             <TouchableOpacity style={st.checkboxRow} onPress={() => setAutoProcess(!autoProcess)}>
                                 <Ionicons name={autoProcess ? 'checkbox' : 'square-outline'} size={22} color={MINT} />
-                                <Text style={st.checkboxText}>Автоматически запустить ИИ-обработку</Text>
+                                <Text style={st.checkboxText}>{t('Авто-обработка ИИ')}</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
@@ -569,14 +517,14 @@ export default function RecordPage({ navigation }) {
                                     {uploading ? (
                                         <ActivityIndicator color="#fff" />
                                     ) : (
-                                        <Text style={st.submitText}>🚀 Создать консультацию</Text>
+                                        <Text style={st.submitText}>🚀 {t('Отправить')}</Text>
                                     )}
                                 </LinearGradient>
                             </TouchableOpacity>
                         </View>
 
                         <TouchableOpacity style={st.backBtn} onPress={() => setStep(2)}>
-                            <Text style={st.backBtnTextAlt}>← Назад</Text>
+                            <Text style={st.backBtnTextAlt}>{t('← Назад')}</Text>
                         </TouchableOpacity>
                     </View>
                 )}
@@ -586,8 +534,7 @@ export default function RecordPage({ navigation }) {
 }
 
 const st = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f8fafc' },
-    blobLayer: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
+    container: { flex: 1 },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10 },
     headerTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a2e' },
     steps: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, marginBottom: 20 },
@@ -615,16 +562,41 @@ const st = StyleSheet.create({
     nextBtn: { marginTop: 16, borderRadius: 14, overflow: 'hidden' },
     nextBtnGrad: { paddingVertical: 14, alignItems: 'center', borderRadius: 14 },
     nextBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-    // Step 2: Shazam-style recording
+    // Step 2: Modern recording with waveform
     recordContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
     shazamTimer: { fontSize: 56, fontWeight: '200', letterSpacing: 4, color: '#1a1a2e', marginBottom: 32 },
-    shazamCenter: { width: 200, height: 200, alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
-    waveBarsRow: { position: 'absolute', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, width: 200 },
-    waveBar: { width: 6, borderRadius: 3 },
-    shazamBtn: { width: 110, height: 110, borderRadius: 55, shadowColor: MINT, shadowOpacity: 0.35, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 8 },
-    shazamBtnRecording: { shadowOpacity: 0.5, shadowRadius: 24 },
+    shazamCenter: { width: 240, height: 200, alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
+    waveContainer: { 
+        position: 'absolute', 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        gap: 3, 
+        width: SW * 0.85,
+        height: 60,
+        bottom: 20,
+    },
+    waveBar: { width: 4, borderRadius: 2, minHeight: 4 },
+    shazamBtn: { 
+        width: 130, 
+        height: 130, 
+        borderRadius: 65, 
+        shadowColor: MINT, 
+        shadowOpacity: 0.35, 
+        shadowRadius: 20, 
+        shadowOffset: { width: 0, height: 8 }, 
+        elevation: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    shazamBtnRecording: { shadowOpacity: 0.5, shadowRadius: 30 },
+    mainButtonImage: { 
+        width: 130, 
+        height: 130, 
+        borderRadius: 65,
+    },
     shazamBtnGrad: { width: 110, height: 110, borderRadius: 55, alignItems: 'center', justifyContent: 'center' },
-    shazamHint: { color: '#64748b', fontSize: 14, marginBottom: 32 },
+    shazamHint: { color: '#64748b', fontSize: 14, marginBottom: 32, marginTop: 20 },
     shazamControls: { flexDirection: 'row', gap: 14 },
     shazamCtrlBtn: {
         flexDirection: 'row', alignItems: 'center', gap: 8,

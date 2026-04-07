@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     View, Text, TouchableOpacity, StyleSheet, Switch,
-    ScrollView, Alert, Linking,
+    ScrollView, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -36,26 +36,6 @@ export default function SettingsScreen({ navigation }) {
     };
 
     const currentLangDisplay = locale === 'kk' ? 'KZ' : 'RUS';
-
-    const handleLogout = () => {
-        Alert.alert(t('settings.logoutConfirm', 'Выйти из аккаунта?'), '', [
-            { text: t('common.cancel', 'Отмена'), style: 'cancel' },
-            {
-                text: t('settings.logout', 'Выйти'), style: 'destructive',
-                onPress: async () => {
-                    try {
-                        const refresh = await AsyncStorage.getItem('refresh_token');
-                        await apiFetch('/auth/logout/', {
-                            method: 'POST',
-                            body: JSON.stringify(refresh ? { refresh } : {}),
-                        });
-                    } catch {}
-                    await AsyncStorage.multiRemove(['access_token', 'refresh_token']);
-                    navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
-                }
-            },
-        ]);
-    };
 
     const Section = ({ title, children }) => (
         <View style={s.section}>
@@ -140,6 +120,13 @@ export default function SettingsScreen({ navigation }) {
 
                     <Section title={t('settings.about', 'О приложении')}>
                         <Row
+                            icon="notifications-outline"
+                            iconColor="#8B5CF6"
+                            label={t('settings.notificationsScreen', 'Уведомления')}
+                            right={<Ionicons name="chevron-forward" size={18} color="#ccc" />}
+                            onPress={() => navigation.navigate('Notifications')}
+                        />
+                        <Row
                             icon="information-circle-outline"
                             iconColor="#3B82F6"
                             label={t('settings.version', 'Версия')}
@@ -153,11 +140,6 @@ export default function SettingsScreen({ navigation }) {
                             onPress={() => Linking.openURL('mailto:support@clinspeech.kz')}
                         />
                     </Section>
-
-                    <TouchableOpacity style={s.logoutBtn} onPress={handleLogout}>
-                        <Ionicons name="log-out-outline" size={18} color="#EF4444" />
-                        <Text style={s.logoutText}>{t('settings.logoutButton', 'Выйти из аккаунта')}</Text>
-                    </TouchableOpacity>
 
                     {user && (
                         <Text style={s.userInfo}>
@@ -189,7 +171,5 @@ const s = StyleSheet.create({
     langText: { fontSize: 13, fontWeight: '600', color: '#888' },
     langTextActive: { color: '#fff' },
     versionText: { fontSize: 14, color: '#aaa' },
-    logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, marginTop: 10, backgroundColor: '#FEF2F2', borderRadius: 12 },
-    logoutText: { color: '#EF4444', fontWeight: '600', fontSize: 15 },
     userInfo: { textAlign: 'center', fontSize: 12, color: '#bbb', marginTop: 16 },
 });

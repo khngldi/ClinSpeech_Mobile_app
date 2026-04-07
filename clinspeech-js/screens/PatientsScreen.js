@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 import { apiFetch, safeJson } from '../api';
 import { useLocale } from '../i18n/LocaleContext';
 
@@ -146,7 +147,9 @@ export default function PatientsScreen({ navigation }) {
   );
 
   return (
-    <SafeAreaView style={s.container}>
+    <View style={{ flex: 1 }}>
+      <AnimatedGradientBackground />
+      <SafeAreaView style={s.container}>
       {/* Header */}
       <View style={s.header}>
         <View>
@@ -275,11 +278,12 @@ export default function PatientsScreen({ navigation }) {
         </View>
       </Modal>
     </SafeAreaView>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f7fa' },
+  container: { flex: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10 },
   title: { fontSize: 24, fontWeight: '700', color: '#1a1a2e' },
   subtitle: { fontSize: 13, color: '#888', marginTop: 2 },

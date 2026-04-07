@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { View, Text, Image, TouchableOpacity, Alert, StyleSheet, Animated } from 'react-native';
+import { View, Text, Image, TouchableOpacity, Alert, StyleSheet, Animated, ActivityIndicator } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
@@ -22,12 +22,13 @@ import TemplatesScreen from '../screens/TemplatesScreen';
 import UsersScreen from '../screens/admin/UsersScreen';
 import AuditLogScreen from '../screens/admin/AuditLogScreen';
 import { tabStyles } from '../styles/TabStyles';
+import imageSource from "../assets/home.png";
 
 // Словарь переводов для названий вкладок
 const TAB_TRANSLATIONS = {
     'Главная': { ru: 'Главная', kk: 'Басты бет' },
     'Пациенты': { ru: 'Пациенты', kk: 'Пациенттер' },
-    'Архив': { ru: 'Архив', kk: 'Мұрағат' },
+    'Архив': { ru: 'Архив', kk: 'Архив' },
     'Профиль': { ru: 'Профиль', kk: 'Профиль' },
     'Настройки': { ru: 'Настройки', kk: 'Баптаулар' },
     'Консультации': { ru: 'Консультации', kk: 'Консультация' },
@@ -42,7 +43,7 @@ const TAB_TRANSLATIONS = {
 const SUBMENU_TRANSLATIONS = {
     'Записать': { ru: 'Записать', kk: 'Жазу' },
     'Список': { ru: 'Список', kk: 'Тізім' },
-    'Дэшборд': { ru: 'Дэшборд', kk: 'Бақылау' },
+    'Дэшборд': { ru: 'Дэшборд', kk: 'Дэшборд' },
     'Пользователи': { ru: 'Пользователи', kk: 'Қолданушы' },
     'Чат-бот': { ru: 'Чат-бот', kk: 'Чат-бот' },
 };
@@ -108,7 +109,7 @@ function CustomTabBar({ state, navigation, role, locale }) {
             return [
                 { key: 'запись', label: 'Записать', icon: require('../assets/record.png'), target: 'RecordPage' },
                 { key: 'список', label: 'Список', icon: require('../assets/list.png'), target: 'HomeList' },
-                { key: 'дашборд', label: 'Дэшборд', icon: require('../assets/favorites.png'), target: 'HomeDashboard' },
+                { key: 'дашборд', label: 'Дэшборд', icon: require('../assets/dashboard.png'), target: 'HomeDashboard' },
                 { key: 'пользователи', label: 'Пользователи', icon: require('../assets/profile.png'), target: 'AdminUsers' },
             ];
         }
@@ -179,33 +180,39 @@ function CustomTabBar({ state, navigation, role, locale }) {
 
             {!isPatient && isMenuOpen && (
                 <Animated.View style={[tabStyles.subMenuContainer, menuStyle]}>
-                    <LinearGradient
-                        colors={['#5eead4', '#2ec4b6']}
-                        style={tabStyles.gradientBackground}
-                    >
-                        {subMenuOptions.map((option) => (
-                            <TouchableOpacity
-                                key={option.key}
-                                style={[
-                                    tabStyles.subMenuItem,
-                                    activeSubOption === option.label && tabStyles.activeBackground,
-                                ]}
-                                onPress={() => handleSubMenuPress(option)}
-                            >
-                                <Image source={option.icon} style={tabStyles.subMenuIcon} />
-                                <Text style={tabStyles.subMenuText}>{translateSubmenu(option.label)}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </LinearGradient>
+                    <View style={tabStyles.gradientBackground}>
+                        {subMenuOptions.map((option) => {
+                            const isActive = activeSubOption === option.label;
+                            return (
+                                <TouchableOpacity
+                                    key={option.key}
+                                    style={[
+                                        tabStyles.subMenuItem,
+                                        isActive && tabStyles.subMenuItemActive,
+                                    ]}
+                                    onPress={() => handleSubMenuPress(option)}
+                                >
+                                    <Image 
+                                        source={option.icon} 
+                                        style={[
+                                            tabStyles.subMenuIcon,
+                                            isActive && tabStyles.subMenuIconActive
+                                        ]} 
+                                    />
+                                    <Text style={[
+                                        tabStyles.subMenuText,
+                                        isActive && tabStyles.subMenuTextActive
+                                    ]}>
+                                        {translateSubmenu(option.label)}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
                 </Animated.View>
             )}
 
             <View style={tabStyles.mainTabBarContainer}>
-                <LinearGradient
-                    colors={['#5eead4', '#2ec4b6']}
-                    style={StyleSheet.absoluteFill}
-                />
-
                 <View style={tabStyles.tabsRow}>
                     {state.routes.map((route, index) => {
                         const isFocused = state.index === index;
@@ -213,25 +220,27 @@ function CustomTabBar({ state, navigation, role, locale }) {
                         const showActiveBg = (!isPatient && isMainButton && isMenuOpen) || (isFocused && !isMenuOpen);
 
                         let imageSource = require('../assets/home.png');
-                        if (route.name === 'Пациенты') imageSource = require('../assets/template.png');
-                        else if (route.name === 'Консультации' || route.name === 'Архив') imageSource = require('../assets/archive.png');
-                        else if (route.name === 'Чат-бот') imageSource = require('../assets/template.png');
+                        if (route.name === 'Пациенты') imageSource = require('../assets/patient.png');
+                        else if (route.name === 'Архив') imageSource = require('../assets/archive.png');
+                        else if (route.name === 'Консультации') imageSource = require('../assets/consultation.png');
+                        else if (route.name === 'Чат-бот') imageSource = require('../assets/chatbot.png');
                         else if (route.name === 'Профиль') imageSource = require('../assets/profile.png');
                         else if (route.name === 'Настройки') imageSource = require('../assets/settings.png');
                         else if (route.name === 'Уведомления') imageSource = require('../assets/template.png');
-                        else if (route.name === 'Расписание') imageSource = require('../assets/list.png');
+                        else if (route.name === 'Расписание') imageSource = require('../assets/schedule.png');
                         else if (route.name === 'Шаблоны') imageSource = require('../assets/template.png');
                         else if (route.name === 'Пользователи') imageSource = require('../assets/profile.png');
                         else if (route.name === 'Аудит') imageSource = require('../assets/list.png');
+
+                        const iconTint = showActiveBg ? '#14b8a6' : '#9ca3af';
 
                         return (
                             <TouchableOpacity
                                 key={route.key}
                                 style={tabStyles.tabItem}
-                                activeOpacity={1}
+                                activeOpacity={0.7}
                                 onPress={() => {
                                     if (isMainButton && !isPatient) {
-                                        // Подменю только для врачей/админов
                                         toggleMenu(!isMenuOpen);
                                     } else {
                                         toggleMenu(false);
@@ -240,8 +249,10 @@ function CustomTabBar({ state, navigation, role, locale }) {
                                 }}
                             >
                                 <View style={[tabStyles.iconContainer, showActiveBg && tabStyles.activeBackground]}>
-                                    <Image source={imageSource} style={tabStyles.mainIcon} />
-                                    <Text style={tabStyles.label}>{translateTab(route.name)}</Text>
+                                    <Image source={imageSource} style={[tabStyles.mainIcon, { tintColor: iconTint }]} />
+                                    <Text style={[tabStyles.label, showActiveBg ? tabStyles.labelActive : tabStyles.labelInactive]}>
+                                        {translateTab(route.name)}
+                                    </Text>
                                 </View>
                             </TouchableOpacity>
                         );
@@ -253,7 +264,8 @@ function CustomTabBar({ state, navigation, role, locale }) {
 }
 
 export default function TabNavigator() {
-    const [role, setRole] = useState('doctor');
+    const [role, setRole] = useState(null); // null = загрузка, чтобы не показывать интерфейс врача пациентам
+    const [loading, setLoading] = useState(true);
     const { locale } = useLocale();
 
     useEffect(() => {
@@ -263,10 +275,12 @@ export default function TabNavigator() {
             .then((data) => {
                 if (!alive) return;
                 setRole(data?.role || 'doctor');
+                setLoading(false);
             })
             .catch(() => {
                 if (!alive) return;
                 setRole('doctor');
+                setLoading(false);
             });
 
         return () => {
@@ -276,6 +290,15 @@ export default function TabNavigator() {
 
     const isPatient = role === 'patient';
     const isAdmin = role === 'admin';
+
+    // Показываем загрузку пока роль не определена (чтобы пациенты не видели интерфейс врача)
+    if (loading || role === null) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f7fa' }}>
+                <ActivityIndicator size="large" color="#2ec4b6" />
+            </View>
+        );
+    }
 
     return (
         <Tab.Navigator

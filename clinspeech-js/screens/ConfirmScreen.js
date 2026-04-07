@@ -1,58 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Animated, Easing, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
+import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 import { apiFetch, safeJson } from '../api';
 
 const MINT = '#2ec4b6';
-const MINT_LIGHT = '#5eead4';
-const MINT_DARK = '#14b8a6';
-const PURPLE = '#a78bfa';
-const { width: SW } = Dimensions.get('window');
-
-/* ── Animated floating blob ── */
-function FloatingBlob({ color, size, startX, startY, delay }) {
-    const translateX = useRef(new Animated.Value(0)).current;
-    const translateY = useRef(new Animated.Value(0)).current;
-    const scale = useRef(new Animated.Value(1)).current;
-
-    useEffect(() => {
-        Animated.loop(
-            Animated.sequence([
-                Animated.delay(delay),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: 80, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: -60, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 1.2, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: -50, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: 90, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 0.85, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: 60, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: 40, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 1.1, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: 0, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: 0, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 1, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-            ])
-        ).start();
-    }, []);
-
-    return (
-        <Animated.View style={{
-            position: 'absolute', left: startX, top: startY,
-            width: size, height: size, borderRadius: size / 2,
-            backgroundColor: color, opacity: 0.25,
-            transform: [{ translateX }, { translateY }, { scale }],
-        }} />
-    );
-}
 
 export default function ConfirmScreen({ route, navigation }) {
     const { audioUri } = route.params;
@@ -119,13 +72,7 @@ export default function ConfirmScreen({ route, navigation }) {
 
     return (
         <View style={styles.container}>
-            {/* Animated gradient blobs */}
-            <View style={styles.blobLayer} pointerEvents="none">
-                <FloatingBlob color={MINT} size={280} startX={-60} startY={40} delay={0} />
-                <FloatingBlob color={MINT_LIGHT} size={220} startX={SW - 130} startY={180} delay={2000} />
-                <FloatingBlob color={PURPLE} size={200} startX={20} startY={400} delay={4500} />
-                <FloatingBlob color={MINT_DARK} size={240} startX={SW - 180} startY={480} delay={7000} />
-            </View>
+            <AnimatedGradientBackground />
 
             <Text style={styles.title}>Обработать?</Text>
 
@@ -154,8 +101,7 @@ export default function ConfirmScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' },
-    blobLayer: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
+    container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     title: { fontSize: 32, color: '#1a1a2e', fontWeight: 'bold', marginBottom: 50, position: 'relative', zIndex: 1 },
     playerContainer: {
         width: 200, height: 200, backgroundColor: 'rgba(46,196,182,0.1)',

@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 import { apiFetch, safeJson } from '../api';
 import { useLocale } from '../i18n/LocaleContext';
 
@@ -90,7 +91,9 @@ export default function ArchiveScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={s.container}>
+    <View style={{ flex: 1 }}>
+      <AnimatedGradientBackground />
+      <SafeAreaView style={s.container}>
       <View style={s.header}>
         <View>
           <Text style={s.title}>{isPatient ? t('Мои консультации') : t('Архив')}</Text>
@@ -125,19 +128,21 @@ export default function ArchiveScreen({ navigation }) {
 
       {/* Status filters */}
       {!isPatient && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRow} contentContainerStyle={{ paddingHorizontal: 16 }}>
-          {STATUSES.map(st => (
-            <TouchableOpacity
-              key={st}
-              style={[s.filterChip, filter === st && s.filterChipActive]}
-              onPress={() => setFilter(st)}
-            >
-              <Text style={[s.filterChipText, filter === st && s.filterChipTextActive]}>
-                {st ? STATUS_LABELS[st] : t('Все')}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <View style={s.filterContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
+            {STATUSES.map(st => (
+              <TouchableOpacity
+                key={st}
+                style={[s.filterChip, filter === st && s.filterChipActive]}
+                onPress={() => setFilter(st)}
+              >
+                <Text style={[s.filterChipText, filter === st && s.filterChipTextActive]}>
+                  {st ? STATUS_LABELS[st] : t('Все')}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
       )}
 
       {/* List */}
@@ -156,16 +161,17 @@ export default function ArchiveScreen({ navigation }) {
           data={filtered}
           keyExtractor={item => String(item.id)}
           renderItem={renderItem}
-          contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 16 }}
+          contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 16, paddingTop: 10 }}
           showsVerticalScrollIndicator={false}
         />
       )}
     </SafeAreaView>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f7fa' },
+  container: { flex: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10 },
   title: { fontSize: 24, fontWeight: '700', color: '#1a1a2e' },
   subtitle: { fontSize: 13, color: '#888', marginTop: 2 },
@@ -173,7 +179,7 @@ const s = StyleSheet.create({
   newBtnText: { color: '#fff', fontWeight: '600', marginLeft: 4, fontSize: 14 },
   searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 16, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 8, borderWidth: 1, borderColor: '#e8e8e8' },
   searchInput: { flex: 1, marginLeft: 8, fontSize: 15, color: '#333' },
-  filterRow: { marginBottom: 12, maxHeight: 44 },
+  filterContainer: { marginBottom: 12, zIndex: 10 },
   filterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#fff', marginRight: 8, borderWidth: 1, borderColor: '#e0e0e0' },
   filterChipActive: { backgroundColor: PRIMARY, borderColor: PRIMARY },
   filterChipText: { fontSize: 13, fontWeight: '500', color: '#555' },

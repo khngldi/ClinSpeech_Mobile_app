@@ -5,7 +5,6 @@ const { width } = Dimensions.get('window');
 export const homeStyles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8fafc',
     },
     safeArea: {
         flex: 1,

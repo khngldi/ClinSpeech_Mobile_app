@@ -13,6 +13,42 @@ const getBaseUrl = () => {
 
 export const BASE_URL = getBaseUrl();
 
+// Получить токен авторизации
+export async function getToken() {
+    return await AsyncStorage.getItem('access_token');
+}
+
+// Получить свежий токен (обновить если истёк)
+export async function getFreshToken() {
+    const accessToken = await AsyncStorage.getItem('access_token');
+    const refreshToken = await AsyncStorage.getItem('refresh_token');
+    
+    if (!accessToken || !refreshToken) {
+        return accessToken;
+    }
+    
+    // Try to refresh the token
+    try {
+        const response = await fetch(`${BASE_URL}/auth/refresh/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh: refreshToken }),
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.access) {
+                await AsyncStorage.setItem('access_token', data.access);
+                return data.access;
+            }
+        }
+    } catch (e) {
+        console.log('Token refresh failed:', e);
+    }
+    
+    return accessToken;
+}
+
 // Безопасный парсинг JSON — если сервер вернул HTML/пустой ответ, покажет понятную ошибку
 export async function safeJson(response) {
     const text = await response.text();

@@ -6,67 +6,18 @@ import {
     TextInput,
     TouchableOpacity,
     ActivityIndicator,
-    Dimensions,
     Image,
     SafeAreaView,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
     Animated,
-    Easing,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BASE_URL, safeJson } from '../api';
+import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 
-const { width: SW } = Dimensions.get('window');
 const MINT = '#2ec4b6';
-const MINT_LIGHT = '#5eead4';
-const MINT_DARK = '#14b8a6';
-const PURPLE = '#a78bfa';
-
-/* ── Animated floating blob ── */
-function FloatingBlob({ color, size, startX, startY, delay }) {
-    const translateX = useRef(new Animated.Value(0)).current;
-    const translateY = useRef(new Animated.Value(0)).current;
-    const scale = useRef(new Animated.Value(1)).current;
-
-    useEffect(() => {
-        Animated.loop(
-            Animated.sequence([
-                Animated.delay(delay),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: 80, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: -60, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 1.2, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: -50, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: 90, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 0.85, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: 60, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: 40, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 1.1, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-                Animated.parallel([
-                    Animated.timing(translateX, { toValue: 0, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(translateY, { toValue: 0, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(scale, { toValue: 1, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                ]),
-            ])
-        ).start();
-    }, []);
-
-    return (
-        <Animated.View style={{
-            position: 'absolute', left: startX, top: startY,
-            width: size, height: size, borderRadius: size / 2,
-            backgroundColor: color, opacity: 0.25,
-            transform: [{ translateX }, { translateY }, { scale }],
-        }} />
-    );
-}
 
 export default function RegisterScreen() {
     const navigation = useNavigation();
@@ -185,14 +136,8 @@ export default function RegisterScreen() {
     };
 
     return (
-        <View style={styles.gradientContainer}>
-            {/* Animated gradient blobs */}
-            <View style={styles.blobLayer} pointerEvents="none">
-                <FloatingBlob color={MINT} size={280} startX={-70} startY={30} delay={0} />
-                <FloatingBlob color={MINT_LIGHT} size={220} startX={SW - 120} startY={150} delay={2000} />
-                <FloatingBlob color={PURPLE} size={200} startX={20} startY={400} delay={4500} />
-                <FloatingBlob color={MINT_DARK} size={240} startX={SW - 180} startY={500} delay={7000} />
-            </View>
+        <View style={styles.container}>
+            <AnimatedGradientBackground />
 
             <SafeAreaView style={{ flex: 1 }}>
                 <KeyboardAvoidingView
@@ -200,7 +145,7 @@ export default function RegisterScreen() {
                     style={{ flex: 1 }}
                 >
                     <ScrollView
-                        contentContainerStyle={styles.container}
+                        contentContainerStyle={styles.scrollContent}
                         keyboardShouldPersistTaps="handled"
                     >
                         {/* LOGO */}
@@ -393,19 +338,18 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-    gradientContainer: { flex: 1, backgroundColor: '#f8fafc' },
-    blobLayer: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
-    container: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 20, position: 'relative', zIndex: 1 },
+    container: { flex: 1 },
+    scrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
     logoWrapper: { alignItems: 'center', marginBottom: 30 },
     logo: { width: 60, height: 60 },
     appTitle: { fontSize: 28, fontWeight: 'bold', color: '#1a1a2e', marginTop: 10 },
-    card: { width: '100%', maxWidth: 400, backgroundColor: '#FFF', borderRadius: 20, padding: 25, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 16, elevation: 5 },
+    card: { width: '100%', maxWidth: 400, backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: 20, padding: 25, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 16, elevation: 5 },
     title: { fontSize: 22, fontWeight: 'bold', marginBottom: 8, color: '#1F2937', textAlign: 'center' },
     subtitle: { color: '#666', marginBottom: 20, textAlign: 'center', fontSize: 14 },
     stepIndicator: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 20 },
     stepDot: { width: 32, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB' },
     stepDotActive: { backgroundColor: MINT },
-    input: { borderWidth: 1, borderColor: '#DDD', borderRadius: 12, padding: 14, marginBottom: 12, fontSize: 16 },
+    input: { borderWidth: 1, borderColor: '#DDD', borderRadius: 12, padding: 14, marginBottom: 12, fontSize: 16, backgroundColor: '#fff' },
     codeInput: { textAlign: 'center', fontSize: 24, letterSpacing: 8, fontWeight: '600' },
     row: { flexDirection: 'row', gap: 10 },
     halfInput: { flex: 1 },
@@ -415,7 +359,7 @@ const styles = StyleSheet.create({
     link: { color: MINT, textAlign: 'center', marginTop: 15 },
     emailConfirmed: { color: '#666', marginBottom: 16, textAlign: 'center', fontSize: 13 },
     roleSelector: { flexDirection: 'row', gap: 10, marginBottom: 12 },
-    roleBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: '#DDD', alignItems: 'center' },
+    roleBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: '#DDD', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.9)' },
     roleBtnActive: { borderColor: MINT, backgroundColor: MINT + '15' },
     roleText: { fontSize: 15, color: '#666' },
     roleTextActive: { color: MINT, fontWeight: '600' },
