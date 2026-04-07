@@ -18,22 +18,95 @@ const MINT_BG = '#f0fdfa';
 const PURPLE = '#a78bfa';
 const { width: SW } = Dimensions.get('window');
 
-/* ── Pulsing ring during recording ── */
+// NCS-style circular visualizer settings
+const VISUALIZER_BARS = 64;
+const BUTTON_SIZE = 130;
+const INNER_RADIUS = 80; // Start of bars from center
+const BAR_WIDTH = 3;
+
+/* ── NCS-style Circular Audio Visualizer ── */
+function NCSVisualizer({ waveAnims, isActive }) {
+    const containerSize = INNER_RADIUS * 2 + 80;
+    
+    return (
+        <View style={{
+            position: 'absolute',
+            width: containerSize,
+            height: containerSize,
+            alignItems: 'center',
+            justifyContent: 'center',
+        }}>
+            {waveAnims.map((anim, i) => {
+                const angle = (i / VISUALIZER_BARS) * 2 * Math.PI - Math.PI / 2;
+                const rotation = (i / VISUALIZER_BARS) * 360;
+                
+                // Create color gradient effect around the circle
+                const hue = 170 + (i / VISUALIZER_BARS) * 30; // Teal to cyan
+                const barColor = isActive ? `hsl(${hue}, 70%, 55%)` : 'rgba(46,196,182,0.15)';
+                
+                return (
+                    <Animated.View
+                        key={i}
+                        style={{
+                            position: 'absolute',
+                            width: BAR_WIDTH,
+                            height: anim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [6, 40],
+                            }),
+                            backgroundColor: barColor,
+                            borderRadius: BAR_WIDTH / 2,
+                            // Position at center, then translate outward
+                            transform: [
+                                { rotate: `${rotation}deg` },
+                                { translateY: -INNER_RADIUS - 10 },
+                            ],
+                            opacity: isActive ? anim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0.5, 1],
+                            }) : 0.3,
+                            // Glow effect
+                            shadowColor: MINT,
+                            shadowOpacity: isActive ? 0.6 : 0,
+                            shadowRadius: 4,
+                            shadowOffset: { width: 0, height: 0 },
+                        }}
+                    />
+                );
+            })}
+            
+            {/* Inner glow ring */}
+            {isActive && (
+                <View style={{
+                    position: 'absolute',
+                    width: INNER_RADIUS * 2 + 10,
+                    height: INNER_RADIUS * 2 + 10,
+                    borderRadius: INNER_RADIUS + 5,
+                    borderWidth: 2,
+                    borderColor: 'rgba(46,196,182,0.3)',
+                    backgroundColor: 'transparent',
+                }} />
+            )}
+        </View>
+    );
+}
+
+/* ── Pulsing glow ring during recording ── */
 function PulsingRing({ delay }) {
     const scale = useRef(new Animated.Value(1)).current;
-    const opacity = useRef(new Animated.Value(0.5)).current;
+    const opacity = useRef(new Animated.Value(0.4)).current;
 
     useEffect(() => {
         Animated.loop(
             Animated.sequence([
                 Animated.delay(delay),
                 Animated.parallel([
-                    Animated.timing(scale, { toValue: 2.5, duration: 2500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(opacity, { toValue: 0, duration: 2500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(scale, { toValue: 1.8, duration: 1500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(opacity, { toValue: 0, duration: 1500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
                 ]),
                 Animated.parallel([
                     Animated.timing(scale, { toValue: 1, duration: 0, useNativeDriver: true }),
-                    Animated.timing(opacity, { toValue: 0.5, duration: 0, useNativeDriver: true }),
+                    Animated.timing(opacity, { toValue: 0.4, duration: 0, useNativeDriver: true }),
                 ]),
             ])
         ).start();
@@ -42,9 +115,13 @@ function PulsingRing({ delay }) {
     return (
         <Animated.View style={{
             position: 'absolute',
-            width: 100, height: 100, borderRadius: 50,
-            borderWidth: 2, borderColor: MINT,
-            opacity, transform: [{ scale }],
+            width: BUTTON_SIZE + 20, 
+            height: BUTTON_SIZE + 20, 
+            borderRadius: (BUTTON_SIZE + 20) / 2,
+            borderWidth: 3, 
+            borderColor: MINT_LIGHT,
+            opacity, 
+            transform: [{ scale }],
         }} />
     );
 }
@@ -66,9 +143,9 @@ export default function RecordPage({ navigation }) {
     const [micError, setMicError] = useState('');
     const timerRef = useRef(null);
 
-    const WAVES = 20;
+    // Circular visualizer animations
     const waveAnims = useRef(
-        [...Array(WAVES)].map(() => new Animated.Value(0.3))
+        [...Array(VISUALIZER_BARS)].map(() => new Animated.Value(0.2))
     ).current;
 
     // Mic button pulse
@@ -135,30 +212,37 @@ export default function RecordPage({ navigation }) {
 
     const startWaveAnimation = () => {
         waveAnims.forEach((anim, i) => {
+            // Create wave-like pattern - bars next to each other have similar values
+            const baseDelay = (i % 8) * 15; // Group bars for wave effect
+            
             const loop = () => {
+                const peakValue = 0.4 + Math.random() * 0.6;
+                const valleyValue = 0.05 + Math.random() * 0.2;
+                const duration = 80 + Math.random() * 120;
+                
                 Animated.sequence([
                     Animated.timing(anim, {
-                        toValue: 0.4 + Math.random() * 0.6,
-                        duration: 150 + Math.random() * 250,
-                        easing: Easing.inOut(Easing.sin),
+                        toValue: peakValue,
+                        duration: duration,
+                        easing: Easing.out(Easing.quad),
                         useNativeDriver: false,
                     }),
                     Animated.timing(anim, {
-                        toValue: 0.15 + Math.random() * 0.25,
-                        duration: 150 + Math.random() * 250,
-                        easing: Easing.inOut(Easing.sin),
+                        toValue: valleyValue,
+                        duration: duration * 1.2,
+                        easing: Easing.in(Easing.quad),
                         useNativeDriver: false,
                     }),
                 ]).start(loop);
             };
-            setTimeout(loop, i * 40);
+            setTimeout(loop, baseDelay);
         });
     };
 
     const stopWaveAnimation = () => {
         waveAnims.forEach(anim => {
             anim.stopAnimation();
-            anim.setValue(0.3);
+            anim.setValue(0.2);
         });
     };
 
@@ -367,7 +451,7 @@ export default function RecordPage({ navigation }) {
                     </View>
                 )}
 
-                {/* ── Step 2: Modern Recording with Main_Button.png ── */}
+                {/* ── Step 2: Modern Recording with NCS-style Visualizer ── */}
                 {step === 2 && (
                     <View style={st.recordContainer}>
                         {!audioUri ? (
@@ -375,38 +459,25 @@ export default function RecordPage({ navigation }) {
                                 {/* Timer */}
                                 <Text style={st.shazamTimer}>{formatTime(duration)}</Text>
 
-                                {/* Center: rings + wave bars + mic button */}
+                                {/* Center: NCS-style circular visualizer + mic button */}
                                 <View style={st.shazamCenter}>
                                     {/* Pulsing rings when recording */}
                                     {isRecording && !isPaused && (
                                         <>
                                             <PulsingRing delay={0} />
-                                            <PulsingRing delay={800} />
-                                            <PulsingRing delay={1600} />
+                                            <PulsingRing delay={500} />
+                                            <PulsingRing delay={1000} />
                                         </>
                                     )}
 
-                                    {/* Modern wave visualization */}
-                                    <View style={st.waveContainer}>
-                                        {waveAnims.map((anim, i) => (
-                                            <Animated.View
-                                                key={i}
-                                                style={[st.waveBar, {
-                                                    height: anim.interpolate({
-                                                        inputRange: [0, 1],
-                                                        outputRange: [4, 50],
-                                                    }),
-                                                    backgroundColor: isRecording && !isPaused
-                                                        ? MINT
-                                                        : 'rgba(46,196,182,0.15)',
-                                                    opacity: isRecording && !isPaused ? 1 : 0.5,
-                                                }]}
-                                            />
-                                        ))}
-                                    </View>
+                                    {/* NCS-style circular visualizer */}
+                                    <NCSVisualizer 
+                                        waveAnims={waveAnims} 
+                                        isActive={isRecording && !isPaused} 
+                                    />
 
                                     {/* Central mic button with Main_Button.png */}
-                                    <Animated.View style={{ transform: [{ scale: btnPulse }] }}>
+                                    <Animated.View style={[st.mainButtonWrapper, { transform: [{ scale: btnPulse }] }]}>
                                         <TouchableOpacity
                                             style={[st.shazamBtn, isRecording && st.shazamBtnRecording]}
                                             onPress={!isRecording ? startRecording : undefined}
@@ -562,41 +633,44 @@ const st = StyleSheet.create({
     nextBtn: { marginTop: 16, borderRadius: 14, overflow: 'hidden' },
     nextBtnGrad: { paddingVertical: 14, alignItems: 'center', borderRadius: 14 },
     nextBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-    // Step 2: Modern recording with waveform
+    // Step 2: NCS-style recording with circular visualizer
     recordContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
-    shazamTimer: { fontSize: 56, fontWeight: '200', letterSpacing: 4, color: '#1a1a2e', marginBottom: 32 },
-    shazamCenter: { width: 240, height: 200, alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
-    waveContainer: { 
-        position: 'absolute', 
-        flexDirection: 'row', 
+    shazamTimer: { fontSize: 56, fontWeight: '200', letterSpacing: 4, color: '#1a1a2e', marginBottom: 24 },
+    shazamCenter: { 
+        width: 280, 
+        height: 280, 
         alignItems: 'center', 
         justifyContent: 'center', 
-        gap: 3, 
-        width: SW * 0.85,
-        height: 60,
-        bottom: 20,
+        marginBottom: 16,
     },
-    waveBar: { width: 4, borderRadius: 2, minHeight: 4 },
+    mainButtonWrapper: {
+        position: 'absolute',
+        zIndex: 10,
+    },
     shazamBtn: { 
-        width: 130, 
-        height: 130, 
-        borderRadius: 65, 
+        width: BUTTON_SIZE, 
+        height: BUTTON_SIZE, 
+        borderRadius: BUTTON_SIZE / 2, 
         shadowColor: MINT, 
-        shadowOpacity: 0.35, 
-        shadowRadius: 20, 
+        shadowOpacity: 0.4, 
+        shadowRadius: 25, 
         shadowOffset: { width: 0, height: 8 }, 
-        elevation: 10,
+        elevation: 12,
         alignItems: 'center',
         justifyContent: 'center',
+        backgroundColor: 'transparent',
     },
-    shazamBtnRecording: { shadowOpacity: 0.5, shadowRadius: 30 },
+    shazamBtnRecording: { 
+        shadowOpacity: 0.6, 
+        shadowRadius: 35,
+        shadowColor: MINT_LIGHT,
+    },
     mainButtonImage: { 
-        width: 130, 
-        height: 130, 
-        borderRadius: 65,
+        width: BUTTON_SIZE, 
+        height: BUTTON_SIZE, 
+        borderRadius: BUTTON_SIZE / 2,
     },
-    shazamBtnGrad: { width: 110, height: 110, borderRadius: 55, alignItems: 'center', justifyContent: 'center' },
-    shazamHint: { color: '#64748b', fontSize: 14, marginBottom: 32, marginTop: 20 },
+    shazamHint: { color: '#64748b', fontSize: 14, marginBottom: 28, marginTop: 12 },
     shazamControls: { flexDirection: 'row', gap: 14 },
     shazamCtrlBtn: {
         flexDirection: 'row', alignItems: 'center', gap: 8,
