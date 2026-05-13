@@ -175,7 +175,7 @@ export default function NotificationsScreen({ navigation }) {
                     ListEmptyComponent={
                         <View style={s.emptyState}>
                             <Ionicons name="notifications-off-outline" size={48} color="#94a3b8" />
-                            <Text style={s.emptyTitle}>{t('Нет уведомлений!')}</Text>
+                            <Text style={s.emptyTitle}>{t('Нет уведомлений')}</Text>
                             <Text style={s.emptySubtitle}>
                                 {t('Новые уведомления появятся здесь')}
                             </Text>
