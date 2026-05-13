@@ -16,10 +16,13 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { BASE_URL, safeJson } from '../api';
 import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
+import { useLocale } from '../i18n/LocaleContext';
+import { getFriendlyApiError } from '../utils/apiErrors';
 
 const MINT = '#2ec4b6';
 
 export default function RegisterScreen() {
+    const { t } = useLocale();
     const navigation = useNavigation();
     const [step, setStep] = useState(1); // 1=email, 2=code, 3=form, 4=success
     const [email, setEmail] = useState('');
@@ -50,7 +53,7 @@ export default function RegisterScreen() {
 
     const handleSendCode = async () => {
         if (!email.includes('@')) {
-            setError('Введите корректный email');
+            setError(t('Введите корректный email'));
             return;
         }
         setError('');
@@ -63,11 +66,12 @@ export default function RegisterScreen() {
             });
             if (!res.ok) {
                 const d = await safeJson(res);
-                throw new Error(d.detail || d.email?.[0] || 'Ошибка отправки кода');
+                throw { status: res.status, payload: d };
             }
             setStep(2);
         } catch (e) {
-            setError(e.message);
+            console.error('Send registration code failed:', e);
+            setError(getFriendlyApiError(e, t, 'Ошибка отправки кода'));
         } finally {
             setIsLoading(false);
         }
@@ -75,7 +79,7 @@ export default function RegisterScreen() {
 
     const handleVerifyCode = () => {
         if (code.length !== 6) {
-            setError('Введите 6-значный код');
+            setError(t('Введите 6-значный код'));
             return;
         }
         setError('');
@@ -84,7 +88,7 @@ export default function RegisterScreen() {
 
     const handleRegister = async () => {
         if (!form.last_name || !form.first_name || !form.username || form.password.length < 8) {
-            setError('Заполните все обязательные поля. Пароль минимум 8 символов.');
+            setError(t('Заполните все обязательные поля. Пароль минимум 8 символов.'));
             return;
         }
         setError('');
@@ -100,12 +104,12 @@ export default function RegisterScreen() {
             });
             if (!res.ok) {
                 const d = await safeJson(res);
-                const msg = d.detail || d.username?.[0] || d.email?.[0] || d.password?.[0] || 'Ошибка регистрации';
-                throw new Error(msg);
+                throw { status: res.status, payload: d };
             }
             setStep(4);
         } catch (e) {
-            setError(e.message);
+            console.error('Registration failed:', e);
+            setError(getFriendlyApiError(e, t, 'Ошибка регистрации'));
         } finally {
             setIsLoading(false);
         }
@@ -127,10 +131,10 @@ export default function RegisterScreen() {
 
     const getStepTitle = () => {
         switch (step) {
-            case 1: return 'Подтвердите email';
-            case 2: return 'Введите код';
-            case 3: return 'Создать аккаунт';
-            case 4: return 'Готово!';
+            case 1: return t('Подтвердите email');
+            case 2: return t('Введите код');
+            case 3: return t('Создать аккаунт');
+            case 4: return t('Готово!');
             default: return '';
         }
     };
@@ -169,7 +173,7 @@ export default function RegisterScreen() {
                             {/* Step 1: Email */}
                             {step === 1 && (
                                 <>
-                                    <Text style={styles.subtitle}>На указанный адрес будет отправлен код подтверждения</Text>
+                                    <Text style={styles.subtitle}>{t('На указанный адрес будет отправлен код подтверждения')}</Text>
                                     <TextInput
                                         style={styles.input}
                                         placeholder="Email"
@@ -188,7 +192,7 @@ export default function RegisterScreen() {
                                         {isLoading ? (
                                             <ActivityIndicator color="#FFF" />
                                         ) : (
-                                            <Text style={styles.buttonText}>ОТПРАВИТЬ КОД</Text>
+                                            <Text style={styles.buttonText}>{t('ОТПРАВИТЬ КОД')}</Text>
                                         )}
                                     </TouchableOpacity>
                                 </>
@@ -197,7 +201,7 @@ export default function RegisterScreen() {
                             {/* Step 2: Code */}
                             {step === 2 && (
                                 <>
-                                    <Text style={styles.subtitle}>Код отправлен на {email}</Text>
+                                    <Text style={styles.subtitle}>{t('Код отправлен на')} {email}</Text>
                                     <TextInput
                                         style={[styles.input, styles.codeInput]}
                                         placeholder="000000"
@@ -208,10 +212,10 @@ export default function RegisterScreen() {
                                         onChangeText={(t) => setCode(t.replace(/\D/g, ''))}
                                     />
                                     <TouchableOpacity style={styles.button} onPress={handleVerifyCode}>
-                                        <Text style={styles.buttonText}>ПОДТВЕРДИТЬ</Text>
+                                        <Text style={styles.buttonText}>{t('ПОДТВЕРДИТЬ')}</Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity onPress={() => { setStep(1); setError(''); }}>
-                                        <Text style={styles.link}>Изменить email</Text>
+                                        <Text style={styles.link}>{t('Изменить email')}</Text>
                                     </TouchableOpacity>
                                 </>
                             )}
@@ -223,14 +227,14 @@ export default function RegisterScreen() {
                                     <View style={styles.row}>
                                         <TextInput
                                             style={[styles.input, styles.halfInput]}
-                                            placeholder="Фамилия *"
+                                            placeholder={t('Фамилия *')}
                                             placeholderTextColor="#999"
                                             value={form.last_name}
                                             onChangeText={(v) => setForm({ ...form, last_name: v })}
                                         />
                                         <TextInput
                                             style={[styles.input, styles.halfInput]}
-                                            placeholder="Имя *"
+                                            placeholder={t('Имя *')}
                                             placeholderTextColor="#999"
                                             value={form.first_name}
                                             onChangeText={(v) => setForm({ ...form, first_name: v })}
@@ -238,14 +242,14 @@ export default function RegisterScreen() {
                                     </View>
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="Отчество"
+                                        placeholder={t('Отчество')}
                                         placeholderTextColor="#999"
                                         value={form.middle_name}
                                         onChangeText={(v) => setForm({ ...form, middle_name: v })}
                                     />
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="Имя пользователя *"
+                                        placeholder={t('Имя пользователя *')}
                                         placeholderTextColor="#999"
                                         autoCapitalize="none"
                                         value={form.username}
@@ -253,7 +257,7 @@ export default function RegisterScreen() {
                                     />
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="Телефон"
+                                        placeholder={t('Телефон')}
                                         placeholderTextColor="#999"
                                         keyboardType="phone-pad"
                                         value={form.phone}
@@ -264,18 +268,18 @@ export default function RegisterScreen() {
                                             style={[styles.roleBtn, form.role === 'doctor' && styles.roleBtnActive]}
                                             onPress={() => setForm({ ...form, role: 'doctor' })}
                                         >
-                                            <Text style={[styles.roleText, form.role === 'doctor' && styles.roleTextActive]}>Врач</Text>
+                                            <Text style={[styles.roleText, form.role === 'doctor' && styles.roleTextActive]}>{t('Врач')}</Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity
                                             style={[styles.roleBtn, form.role === 'patient' && styles.roleBtnActive]}
                                             onPress={() => setForm({ ...form, role: 'patient' })}
                                         >
-                                            <Text style={[styles.roleText, form.role === 'patient' && styles.roleTextActive]}>Пациент</Text>
+                                            <Text style={[styles.roleText, form.role === 'patient' && styles.roleTextActive]}>{t('Пациент')}</Text>
                                         </TouchableOpacity>
                                     </View>
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="Пароль * (мин. 8 символов)"
+                                        placeholder={t('Пароль * (мин. 8 символов)')}
                                         placeholderTextColor="#999"
                                         secureTextEntry
                                         value={form.password}
@@ -289,11 +293,11 @@ export default function RegisterScreen() {
                                         {isLoading ? (
                                             <ActivityIndicator color="#FFF" />
                                         ) : (
-                                            <Text style={styles.buttonText}>ЗАРЕГИСТРИРОВАТЬСЯ</Text>
+                                            <Text style={styles.buttonText}>{t('ЗАРЕГИСТРИРОВАТЬСЯ')}</Text>
                                         )}
                                     </TouchableOpacity>
                                     <TouchableOpacity onPress={() => { setStep(1); setError(''); }}>
-                                        <Text style={styles.link}>Назад</Text>
+                                        <Text style={styles.link}>{t('Назад')}</Text>
                                     </TouchableOpacity>
                                 </>
                             )}
@@ -302,13 +306,13 @@ export default function RegisterScreen() {
                             {step === 4 && (
                                 <>
                                     <Text style={styles.successText}>
-                                        Ваш аккаунт успешно создан!{'\n'}Теперь вы можете войти в систему.
+                                        {t('Ваш аккаунт успешно создан!')}{'\n'}{t('Теперь вы можете войти в систему.')}
                                     </Text>
                                     <TouchableOpacity
                                         style={styles.button}
                                         onPress={() => navigation.navigate('Login')}
                                     >
-                                        <Text style={styles.buttonText}>ВОЙТИ</Text>
+                                        <Text style={styles.buttonText}>{t('ВОЙТИ')}</Text>
                                     </TouchableOpacity>
                                 </>
                             )}
@@ -317,14 +321,14 @@ export default function RegisterScreen() {
                                 <>
                                     <View style={styles.dividerContainer}>
                                         <View style={styles.divider} />
-                                        <Text style={styles.dividerText}>или</Text>
+                                        <Text style={styles.dividerText}>{t('или')}</Text>
                                         <View style={styles.divider} />
                                     </View>
 
                                     <TouchableOpacity onPress={() => navigation.navigate('Login')}>
                                         <Text style={styles.registerText}>
-                                            Уже есть аккаунт?{' '}
-                                            <Text style={{ color: MINT }}>Войти</Text>
+                                            {t('Уже есть аккаунт?')}{' '}
+                                            <Text style={{ color: MINT }}>{t('Войти')}</Text>
                                         </Text>
                                     </TouchableOpacity>
                                 </>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     View, Text, TouchableOpacity, StyleSheet, Switch,
-    ScrollView, Linking,
+    ScrollView, Linking, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,14 +17,33 @@ export default function SettingsScreen({ navigation }) {
     const [notifications, setNotifications] = useState(true);
     const [autoProcess, setAutoProcess] = useState(true);
     const [user, setUser] = useState(null);
+    const [refreshing, setRefreshing] = useState(false);
 
     const isPatient = user?.role === 'patient';
 
     useEffect(() => {
-        apiFetch('/me/').then(safeJson).then(setUser).catch(() => {});
-        AsyncStorage.getItem('setting_notifications').then(v => v !== null && setNotifications(v === 'true'));
-        AsyncStorage.getItem('setting_autoprocess').then(v => v !== null && setAutoProcess(v === 'true'));
+        loadSettings();
     }, []);
+
+    const loadSettings = async () => {
+        try {
+            const [me, notificationValue, autoProcessValue] = await Promise.all([
+                apiFetch('/me/').then(safeJson).catch(() => null),
+                AsyncStorage.getItem('setting_notifications'),
+                AsyncStorage.getItem('setting_autoprocess'),
+            ]);
+            if (me) setUser(me);
+            if (notificationValue !== null) setNotifications(notificationValue === 'true');
+            if (autoProcessValue !== null) setAutoProcess(autoProcessValue === 'true');
+        } finally {
+            setRefreshing(false);
+        }
+    };
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        loadSettings();
+    };
 
     const saveSetting = async (key, value) => {
         await AsyncStorage.setItem(key, String(value));
@@ -36,6 +55,11 @@ export default function SettingsScreen({ navigation }) {
     };
 
     const currentLangDisplay = locale === 'kk' ? 'KZ' : 'RUS';
+    const openTemplates = () => {
+        const parent = navigation.getParent?.();
+        if (parent) parent.navigate('Templates');
+        else navigation.navigate('Templates');
+    };
 
     const Section = ({ title, children }) => (
         <View style={s.section}>
@@ -71,7 +95,11 @@ export default function SettingsScreen({ navigation }) {
                     <View style={{ width: 28 }} />
                 </View>
 
-                <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+                <ScrollView
+                    contentContainerStyle={s.scroll}
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={PRIMARY} />}
+                >
                     <Section title={t('settings.general', 'Общие')}>
                         <Row
                             icon="language-outline"
@@ -114,6 +142,15 @@ export default function SettingsScreen({ navigation }) {
                                         trackColor={{ true: PRIMARY }}
                                     />
                                 }
+                            />
+                        )}
+                        {!isPatient && (
+                            <Row
+                                icon="document-text-outline"
+                                iconColor="#14B8A6"
+                                label={t('Шаблоны')}
+                                right={<Ionicons name="chevron-forward" size={18} color="#ccc" />}
+                                onPress={openTemplates}
                             />
                         )}
                     </Section>

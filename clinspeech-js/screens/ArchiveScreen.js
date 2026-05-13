@@ -1,24 +1,25 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ActivityIndicator, TextInput, ScrollView,
+  ActivityIndicator, TextInput, ScrollView, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 import { apiFetch, safeJson } from '../api';
 import { useLocale } from '../i18n/LocaleContext';
+import StatusChip from '../components/StatusChip';
+import { getConsultationStatusMeta, CONSULTATION_STATUSES } from '../utils/status';
 
 const PRIMARY = '#2ec4b6';
-const STATUS_COLORS = { created: '#9CA3AF', processing: '#3B82F6', generating: '#F59E0B', ready: '#22C55E', error: '#EF4444' };
 
 export default function ArchiveScreen({ navigation }) {
-  const { t } = useLocale();
-  const STATUS_LABELS = { created: t('Создано'), processing: t('Обработка'), generating: t('Генерация'), ready: t('Готово'), error: t('Ошибка') };
-  const STATUSES = ['', 'created', 'processing', 'generating', 'ready', 'error'];
+  const { t, formatDate } = useLocale();
+  const STATUSES = ['', ...CONSULTATION_STATUSES];
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('');
   const [search, setSearch] = useState('');
   const [user, setUser] = useState(null);
@@ -27,17 +28,25 @@ export default function ArchiveScreen({ navigation }) {
     apiFetch('/me/').then(safeJson).then(setUser).catch(() => {});
   }, []);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (showLoader = true) => {
+    if (showLoader) setLoading(true);
     try {
       const params = filter ? `?status=${filter}` : '';
       const res = await apiFetch(`/consultations/${params}`);
       const data = await safeJson(res);
       setItems(Array.isArray(data) ? data : (data?.results || []));
-    } catch {} finally { setLoading(false); }
+    } catch {} finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [filter]);
 
   useEffect(() => { load(); }, [load]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    load(false);
+  }, [load]);
 
   const isPatient = user?.role === 'patient';
 
@@ -49,14 +58,11 @@ export default function ArchiveScreen({ navigation }) {
   });
 
   const renderItem = ({ item }) => {
-    const statusColor = STATUS_COLORS[item.status] || '#9CA3AF';
-    const statusLabel = STATUS_LABELS[item.status] || item.status;
-
     return (
       <TouchableOpacity
         style={s.card}
         activeOpacity={0.7}
-        onPress={() => navigation.navigate('Detail', { consultation: item })}
+        onPress={() => navigation.navigate('Detail', { consultation: item, consultationId: item.id })}
       >
         <View style={s.cardHeader}>
           <View style={{ flex: 1 }}>
@@ -65,15 +71,12 @@ export default function ArchiveScreen({ navigation }) {
             </Text>
             <Text style={s.cardId}>#{item.id}</Text>
           </View>
-          <View style={[s.statusBadge, { backgroundColor: statusColor + '20' }]}>
-            <View style={[s.statusDot, { backgroundColor: statusColor }]} />
-            <Text style={[s.statusText, { color: statusColor }]}>{statusLabel}</Text>
-          </View>
+          <StatusChip status={item.status} compact />
         </View>
         <View style={s.cardMeta}>
           <View style={s.metaItem}>
             <Ionicons name="calendar-outline" size={14} color="#888" />
-            <Text style={s.metaText}>{new Date(item.created_at).toLocaleDateString('ru-RU')}</Text>
+            <Text style={s.metaText}>{formatDate(item.created_at)}</Text>
           </View>
           <View style={s.metaItem}>
             <Ionicons name="person-outline" size={14} color="#888" />
@@ -137,7 +140,7 @@ export default function ArchiveScreen({ navigation }) {
                 onPress={() => setFilter(st)}
               >
                 <Text style={[s.filterChipText, filter === st && s.filterChipTextActive]}>
-                  {st ? STATUS_LABELS[st] : t('Все')}
+                  {st ? getConsultationStatusMeta(st, t).label : t('Все')}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -149,13 +152,18 @@ export default function ArchiveScreen({ navigation }) {
       {loading ? (
         <ActivityIndicator size="large" color={PRIMARY} style={{ marginTop: 40 }} />
       ) : filtered.length === 0 ? (
-        <View style={s.empty}>
-          <Ionicons name="document-text-outline" size={48} color="#ccc" />
-          <Text style={s.emptyTitle}>{t('Нет консультаций')}</Text>
-          <Text style={s.emptyText}>
-            {isPatient ? t('У вас пока нет записей о консультациях') : t('Создайте новый приём для начала работы')}
-          </Text>
-        </View>
+        <ScrollView
+          contentContainerStyle={s.emptyScroll}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={PRIMARY} />}
+        >
+          <View style={s.empty}>
+            <Ionicons name="document-text-outline" size={48} color="#ccc" />
+            <Text style={s.emptyTitle}>{t('Нет консультаций')}</Text>
+            <Text style={s.emptyText}>
+              {isPatient ? t('У вас пока нет записей о консультациях') : t('Создайте новый приём для начала работы')}
+            </Text>
+          </View>
+        </ScrollView>
       ) : (
         <FlatList
           data={filtered}
@@ -163,6 +171,7 @@ export default function ArchiveScreen({ navigation }) {
           renderItem={renderItem}
           contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 16, paddingTop: 10 }}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={PRIMARY} />}
         />
       )}
     </SafeAreaView>
@@ -195,6 +204,7 @@ const s = StyleSheet.create({
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaText: { fontSize: 12, color: '#888' },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 },
+  emptyScroll: { flexGrow: 1 },
   emptyTitle: { fontSize: 18, fontWeight: '600', color: '#999', marginTop: 12 },
   emptyText: { fontSize: 14, color: '#bbb', marginTop: 4, textAlign: 'center', paddingHorizontal: 40 },
 });

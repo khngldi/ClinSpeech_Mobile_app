@@ -15,10 +15,13 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL, safeJson } from '../api';
 import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
+import { useLocale } from '../i18n/LocaleContext';
+import { getFriendlyApiError } from '../utils/apiErrors';
 
 const MINT = '#2ec4b6';
 
 export default function LoginScreen({ navigation }) {
+    const { t } = useLocale();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -43,17 +46,22 @@ export default function LoginScreen({ navigation }) {
             const data = await safeJson(response);
 
             if (!response.ok) {
-                throw new Error(data.detail || 'Неверный логин или пароль.');
+                throw { status: response.status, payload: data };
             }
 
             // Сохраняем токены
             await AsyncStorage.setItem('access_token', data.access);
             await AsyncStorage.setItem('refresh_token', data.refresh);
 
-            navigation.replace('MainTabs');
+            navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
         } catch (err) {
+            console.error('Login failed:', err);
             setError(true);
-            setErrorMessage(err.message || 'Ошибка подключения к серверу.');
+            setErrorMessage(
+                err?.status === 400 || err?.status === 401
+                    ? t('Неверный логин или пароль.')
+                    : getFriendlyApiError(err, t, 'Ошибка подключения к серверу.')
+            );
         } finally {
             setIsLoading(false);
         }
@@ -85,14 +93,14 @@ export default function LoginScreen({ navigation }) {
 
                         {/* CARD */}
                         <View style={styles.card}>
-                            <Text style={styles.title}>Вход</Text>
+                            <Text style={styles.title}>{t('Вход')}</Text>
                             <Text style={styles.subtitle}>
-                                Введите ваши учётные данные
+                                {t('Введите ваши учётные данные')}
                             </Text>
 
                             <TextInput
                                 style={styles.input}
-                                placeholder="Логин или email"
+                                placeholder={t('Логин или email')}
                                 placeholderTextColor="#999"
                                 value={email}
                                 onChangeText={setEmail}
@@ -101,7 +109,7 @@ export default function LoginScreen({ navigation }) {
 
                             <TextInput
                                 style={styles.input}
-                                placeholder="Пароль"
+                                placeholder={t('Пароль')}
                                 placeholderTextColor="#999"
                                 secureTextEntry
                                 value={password}
@@ -126,7 +134,7 @@ export default function LoginScreen({ navigation }) {
                                 {isLoading ? (
                                     <ActivityIndicator color="#FFF" />
                                 ) : (
-                                    <Text style={styles.buttonText}>ВОЙТИ</Text>
+                                    <Text style={styles.buttonText}>{t('ВОЙТИ')}</Text>
                                 )}
                             </TouchableOpacity>
 
@@ -134,13 +142,13 @@ export default function LoginScreen({ navigation }) {
                                 onPress={() => navigation.navigate('PasswordForgot')}
                             >
                                 <Text style={styles.link}>
-                                    Я не могу вспомнить свой пароль
+                                    {t('Я не могу вспомнить свой пароль')}
                                 </Text>
                             </TouchableOpacity>
 
                             <View style={styles.dividerContainer}>
                                 <View style={styles.divider} />
-                                <Text style={styles.dividerText}>или</Text>
+                                <Text style={styles.dividerText}>{t('или')}</Text>
                                 <View style={styles.divider} />
                             </View>
 
@@ -148,9 +156,9 @@ export default function LoginScreen({ navigation }) {
                                 onPress={() => navigation.navigate('Register')}
                             >
                                 <Text style={styles.registerText}>
-                                    Нет аккаунта?{' '}
+                                    {t('Нет аккаунта?')}{' '}
                                     <Text style={{ color: MINT }}>
-                                        Зарегистрироваться
+                                        {t('Зарегистрироваться')}
                                     </Text>
                                 </Text>
                             </TouchableOpacity>

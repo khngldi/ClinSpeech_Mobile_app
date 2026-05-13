@@ -1,26 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator,
+  ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 import { apiFetch, safeJson } from '../api';
 import { useLocale } from '../i18n/LocaleContext';
+import StatusChip from '../components/StatusChip';
+import { getConsultationStatusMeta, CONSULTATION_STATUS_THEME } from '../utils/status';
 
 const PRIMARY = '#2ec4b6';
-const STATUS_COLORS = { created: '#9CA3AF', processing: '#3B82F6', generating: '#F59E0B', ready: '#22C55E', error: '#EF4444' };
 
 export default function DashboardScreen({ navigation }) {
-  const { t } = useLocale();
-  const STATUS_LABELS = { created: t('Создано'), processing: t('Обработка'), generating: t('Генерация'), ready: t('Готово'), error: t('Ошибка') };
+  const { t, formatDate, formatTime } = useLocale();
 
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState(null);
   const [recentConsults, setRecentConsults] = useState([]);
   const [todayAppts, setTodayAppts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadAll();
@@ -48,6 +49,12 @@ export default function DashboardScreen({ navigation }) {
     } finally { setLoading(false); }
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadAll();
+    setRefreshing(false);
+  };
+
   if (loading) return (
     <View style={s.loadingContainer}>
       <AnimatedGradientBackground />
@@ -63,7 +70,11 @@ export default function DashboardScreen({ navigation }) {
     <View style={{ flex: 1 }}>
       <AnimatedGradientBackground />
       <SafeAreaView style={s.container}>
-        <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={s.scroll}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={PRIMARY} />}
+        >
         {/* Header */}
         <View style={s.header}>
           <View style={{ flex: 1 }}>
@@ -112,10 +123,10 @@ export default function DashboardScreen({ navigation }) {
             <View style={s.statusGrid}>
               {Object.entries(statusData).map(([key, val]) => (
                 <View key={key} style={s.statusItem}>
-                  <View style={[s.statusBar, { backgroundColor: STATUS_COLORS[key] || '#9CA3AF' }]}>
+                  <View style={[s.statusBar, { backgroundColor: CONSULTATION_STATUS_THEME[key]?.color || '#9CA3AF' }]}>
                     <Text style={s.statusBarText}>{val}</Text>
                   </View>
-                  <Text style={s.statusBarLabel}>{STATUS_LABELS[key] || key}</Text>
+                  <Text style={s.statusBarLabel}>{getConsultationStatusMeta(key, t).label}</Text>
                 </View>
               ))}
             </View>
@@ -139,21 +150,17 @@ export default function DashboardScreen({ navigation }) {
               <TouchableOpacity
                 key={c.id}
                 style={s.listItem}
-                onPress={() => navigation.navigate('Detail', { consultation: c })}
+                onPress={() => navigation.navigate('Detail', { consultation: c, consultationId: c.id })}
               >
                 <View style={{ flex: 1 }}>
                   <Text style={s.listItemName}>
                     {c.patient_info?.last_name} {c.patient_info?.first_name}
                   </Text>
                   <Text style={s.listItemMeta}>
-                    {new Date(c.created_at).toLocaleDateString('ru-RU')}
+                    {formatDate(c.created_at)}
                   </Text>
                 </View>
-                <View style={[s.badge, { backgroundColor: (STATUS_COLORS[c.status] || '#9CA3AF') + '20' }]}>
-                  <Text style={[s.badgeText, { color: STATUS_COLORS[c.status] || '#9CA3AF' }]}>
-                    {STATUS_LABELS[c.status] || c.status}
-                  </Text>
-                </View>
+                <StatusChip status={c.status} compact />
               </TouchableOpacity>
             ))
           )}
@@ -175,7 +182,7 @@ export default function DashboardScreen({ navigation }) {
                   <View style={{ flex: 1 }}>
                     <Text style={s.listItemName}>{a.patient_name}</Text>
                     <Text style={s.listItemMeta}>
-                      {new Date(a.scheduled_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} · {a.reason || t('Новый приём')}
+                      {formatTime(a.scheduled_at)} · {a.reason || t('Новый приём')}
                     </Text>
                   </View>
                   <View style={[s.badge, {

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { View, Text, Image, TouchableOpacity, Alert, StyleSheet, Animated, ActivityIndicator } from 'react-native';
+import { View, Text, Image, TouchableOpacity, Alert, Animated, ActivityIndicator, BackHandler } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
@@ -23,6 +23,7 @@ import UsersScreen from '../screens/admin/UsersScreen';
 import AuditLogScreen from '../screens/admin/AuditLogScreen';
 import { tabStyles } from '../styles/TabStyles';
 import imageSource from "../assets/home.png";
+import { usePushNotificationHandlers } from '../services/pushNotifications';
 
 // Словарь переводов для названий вкладок
 const TAB_TRANSLATIONS = {
@@ -31,11 +32,11 @@ const TAB_TRANSLATIONS = {
     'Архив': { ru: 'Архив', kk: 'Архив' },
     'Профиль': { ru: 'Профиль', kk: 'Профиль' },
     'Настройки': { ru: 'Настройки', kk: 'Баптаулар' },
-    'Консультации': { ru: 'Консультации', kk: 'Консультация' },
+    'Консультации': { ru: 'Консультации', kk: 'Консультациялар' },
     'Чат-бот': { ru: 'Чат-бот', kk: 'Чат-бот' },
-    'Уведомления': { ru: 'Уведомления', kk: 'Хабарлама' },
+    'Уведомления': { ru: 'Уведомления', kk: 'Хабарламалар' },
     'Расписание': { ru: 'Расписание', kk: 'Кесте' },
-    'Пользователи': { ru: 'Пользователи', kk: 'Қолданушы' },
+    'Пользователи': { ru: 'Пользователи', kk: 'Пайдаланушылар' },
     'Аудит': { ru: 'Аудит', kk: 'Аудит' },
 };
 
@@ -44,7 +45,7 @@ const SUBMENU_TRANSLATIONS = {
     'Записать': { ru: 'Записать', kk: 'Жазу' },
     'Список': { ru: 'Список', kk: 'Тізім' },
     'Дэшборд': { ru: 'Дэшборд', kk: 'Дэшборд' },
-    'Пользователи': { ru: 'Пользователи', kk: 'Қолданушы' },
+    'Пользователи': { ru: 'Пользователи', kk: 'Пайдаланушылар' },
     'Чат-бот': { ru: 'Чат-бот', kk: 'Чат-бот' },
 };
 
@@ -78,6 +79,7 @@ function PatientHomeStackNavigator() {
 }
 
 function CustomTabBar({ state, navigation, role, locale }) {
+    const { t } = useLocale();
     const isPatient = role === 'patient';
     const isAdmin = role === 'admin';
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -98,6 +100,30 @@ function CustomTabBar({ state, navigation, role, locale }) {
     const currentRoute = state.routes[state.index];
     const isMainTabFocused = currentRoute.name === 'Главная';
     const focusedRouteName = getFocusedRouteNameFromRoute(currentRoute) ?? 'HomeRecord';
+
+    useEffect(() => {
+        const onBackPress = () => {
+            const activeRoute = state.routes[state.index];
+            const activeNestedRoute = getFocusedRouteNameFromRoute(activeRoute);
+            const homeRoot = isPatient ? 'PatientDashboard' : 'HomeRecord';
+            const isHomeRoot = activeRoute.name === 'Главная' && (!activeNestedRoute || activeNestedRoute === homeRoot);
+
+            if (!isHomeRoot) return false;
+
+            Alert.alert(
+                t('Вы точно хотите выйти?'),
+                '',
+                [
+                    { text: t('Отмена'), style: 'cancel' },
+                    { text: t('Выйти'), style: 'destructive', onPress: () => BackHandler.exitApp() },
+                ],
+            );
+            return true;
+        };
+
+        const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+        return () => subscription.remove();
+    }, [state.index, state.routes, isPatient, t]);
 
     // Пациенты не имеют подменю - у них нет "Записать"
     const subMenuOptions = useMemo(() => {
@@ -151,7 +177,7 @@ function CustomTabBar({ state, navigation, role, locale }) {
     const handleSubMenuPress = (option) => {
         toggleMenu(false);
         if (!option?.target) {
-            Alert.alert(`Раздел ${option?.label || ''}`, 'Этот экран в разработке');
+            Alert.alert(t('Раздел'), t('Этот экран в разработке'));
             return;
         }
         navigation.navigate('Главная', { screen: option.target });
@@ -267,6 +293,7 @@ export default function TabNavigator() {
     const [role, setRole] = useState(null); // null = загрузка, чтобы не показывать интерфейс врача пациентам
     const [loading, setLoading] = useState(true);
     const { locale } = useLocale();
+    usePushNotificationHandlers(true);
 
     useEffect(() => {
         let alive = true;
@@ -303,7 +330,8 @@ export default function TabNavigator() {
     return (
         <Tab.Navigator
             tabBar={(props) => <CustomTabBar {...props} role={role} locale={locale} />}
-            screenOptions={{ headerShown: false, animation: 'fade' }}
+            backBehavior="firstRoute"
+            screenOptions={{ headerShown: false, animation: 'shift' }}
         >
             {isPatient ? (
                 <>

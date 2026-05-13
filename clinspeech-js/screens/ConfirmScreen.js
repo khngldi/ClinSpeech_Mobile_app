@@ -4,10 +4,13 @@ import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 import { apiFetch, safeJson } from '../api';
+import { useLocale } from '../i18n/LocaleContext';
+import { getFriendlyApiError } from '../utils/apiErrors';
 
 const MINT = '#2ec4b6';
 
 export default function ConfirmScreen({ route, navigation }) {
+    const { t } = useLocale();
     const { audioUri } = route.params;
     const [sound, setSound] = useState();
     const [isPlaying, setIsPlaying] = useState(false);
@@ -56,7 +59,7 @@ export default function ConfirmScreen({ route, navigation }) {
 
             if (!response.ok) {
                 const err = await safeJson(response);
-                throw new Error(err.detail || 'Ошибка при отправке');
+                throw { status: response.status, payload: err };
             }
 
             navigation.navigate('MainTabs', {
@@ -64,7 +67,8 @@ export default function ConfirmScreen({ route, navigation }) {
                 params: { screen: 'HomeList' },
             });
         } catch (e) {
-            Alert.alert('Ошибка', e.message || 'Не удалось отправить запись');
+            console.error('Confirm upload failed:', e);
+            Alert.alert(t('Ошибка'), getFriendlyApiError(e, t, 'Не удалось отправить запись'));
         } finally {
             setIsUploading(false);
         }
@@ -74,7 +78,7 @@ export default function ConfirmScreen({ route, navigation }) {
         <View style={styles.container}>
             <AnimatedGradientBackground />
 
-            <Text style={styles.title}>Обработать?</Text>
+            <Text style={styles.title}>{t('Обработать?')}</Text>
 
             {/* Иконка файла / Проигрыватель */}
             <View style={styles.playerContainer}>
@@ -86,13 +90,13 @@ export default function ConfirmScreen({ route, navigation }) {
 
             <View style={styles.buttonsRow}>
                 <TouchableOpacity style={styles.cancelBtn} onPress={() => navigation.goBack()}>
-                    <Text style={styles.cancelBtnText}>Отмена</Text>
+                    <Text style={styles.cancelBtnText}>{t('Отмена')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={isUploading}>
                     {isUploading
                         ? <ActivityIndicator color="#fff" />
-                        : <Text style={styles.btnText}>Отправить</Text>
+                        : <Text style={styles.btnText}>{t('Отправить')}</Text>
                     }
                 </TouchableOpacity>
             </View>

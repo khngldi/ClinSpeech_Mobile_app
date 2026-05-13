@@ -32,6 +32,7 @@
       "usesCleartextTraffic": true,
       "permissions": [
         "RECORD_AUDIO",
+        "POST_NOTIFICATIONS",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
         "READ_MEDIA_IMAGES"
@@ -39,6 +40,12 @@
     },
     "plugins": [
       "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "default"
+        }
+      ],
       [
         "expo-av",
         {

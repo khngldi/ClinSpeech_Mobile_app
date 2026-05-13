@@ -13,6 +13,18 @@ const interpolate = (template, params = {}) => {
   });
 };
 
+const toDate = (value) => {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (typeof value === 'string') {
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) {
+      return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    }
+  }
+  return new Date(value);
+};
+
 export function LocaleProvider({ children }) {
   const [locale, setLocaleState] = useState('ru');
   const [isLoading, setIsLoading] = useState(true);
@@ -53,27 +65,33 @@ export function LocaleProvider({ children }) {
   const formatDate = useCallback((value, options = {}) => {
     if (!value) return '';
     const dateLocale = locale === 'kk' ? 'kk-KZ' : 'ru-RU';
+    const date = toDate(value);
+    if (!date || Number.isNaN(date.getTime())) return '';
     return new Intl.DateTimeFormat(dateLocale, { 
       year: 'numeric', 
       month: '2-digit', 
       day: '2-digit', 
       ...options 
-    }).format(new Date(value));
+    }).format(date);
   }, [locale]);
 
   const formatTime = useCallback((value, options = {}) => {
     if (!value) return '';
     const dateLocale = locale === 'kk' ? 'kk-KZ' : 'ru-RU';
+    const date = toDate(value);
+    if (!date || Number.isNaN(date.getTime())) return '';
     return new Intl.DateTimeFormat(dateLocale, { 
       hour: '2-digit', 
       minute: '2-digit', 
       ...options 
-    }).format(new Date(value));
+    }).format(date);
   }, [locale]);
 
   const formatDateTime = useCallback((value, options = {}) => {
     if (!value) return '';
     const dateLocale = locale === 'kk' ? 'kk-KZ' : 'ru-RU';
+    const date = toDate(value);
+    if (!date || Number.isNaN(date.getTime())) return '';
     return new Intl.DateTimeFormat(dateLocale, { 
       year: 'numeric', 
       month: '2-digit', 
@@ -81,7 +99,7 @@ export function LocaleProvider({ children }) {
       hour: '2-digit', 
       minute: '2-digit', 
       ...options 
-    }).format(new Date(value));
+    }).format(date);
   }, [locale]);
 
   const value = useMemo(() => ({

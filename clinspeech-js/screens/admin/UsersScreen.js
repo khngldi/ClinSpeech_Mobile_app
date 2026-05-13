@@ -8,6 +8,7 @@ import {
     ActivityIndicator,
     TextInput,
     Alert,
+    RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,23 +18,22 @@ import { useLocale } from '../../i18n/LocaleContext';
 
 const MINT = '#2ec4b6';
 
-const ROLE_COLORS = {
-    admin: { bg: '#fee2e2', text: '#dc2626', label: 'Админ' },
-    doctor: { bg: '#dbeafe', text: '#1d4ed8', label: 'Врач' },
-    patient: { bg: '#f3f4f6', text: '#6b7280', label: 'Пациент' },
-};
-
-const ROLE_FILTERS = [
-    { key: '', label: 'Все' },
-    { key: 'admin', label: 'Админы' },
-    { key: 'doctor', label: 'Врачи' },
-    { key: 'patient', label: 'Пациенты' },
-];
-
 export default function UsersScreen({ navigation }) {
     const { t } = useLocale();
+    const ROLE_COLORS = {
+        admin: { bg: '#fee2e2', text: '#dc2626', label: t('Админ') },
+        doctor: { bg: '#dbeafe', text: '#1d4ed8', label: t('Врач') },
+        patient: { bg: '#f3f4f6', text: '#6b7280', label: t('Пациент') },
+    };
+    const ROLE_FILTERS = [
+        { key: '', label: t('Все') },
+        { key: 'admin', label: t('Админы') },
+        { key: 'doctor', label: t('Врачи') },
+        { key: 'patient', label: t('Пациенты') },
+    ];
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [search, setSearch] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
 
@@ -41,17 +41,23 @@ export default function UsersScreen({ navigation }) {
         loadUsers();
     }, []);
 
-    const loadUsers = async () => {
-        setLoading(true);
+    const loadUsers = async (showLoader = true) => {
+        if (showLoader) setLoading(true);
         try {
             const res = await apiFetch('/users/');
             const data = await safeJson(res);
             setUsers(Array.isArray(data) ? data : (data?.results || []));
         } catch (error) {
-            console.log('Error loading users:', error);
+            console.error('Users load failed:', error);
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
+    };
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        loadUsers(false);
     };
 
     const handleActivate = async (id) => {
@@ -59,25 +65,25 @@ export default function UsersScreen({ navigation }) {
             await apiFetch(`/users/${id}/activate/`, { method: 'POST' });
             loadUsers();
         } catch (error) {
-            Alert.alert('Ошибка', 'Не удалось активировать пользователя');
+            Alert.alert(t('Ошибка'), t('Не удалось активировать пользователя'));
         }
     };
 
     const handleDeactivate = async (id) => {
         Alert.alert(
-            'Деактивировать пользователя?',
-            'Пользователь не сможет войти в систему',
+            t('Деактивировать пользователя?'),
+            t('Пользователь не сможет войти в систему'),
             [
-                { text: 'Отмена', style: 'cancel' },
+                { text: t('Отмена'), style: 'cancel' },
                 {
-                    text: 'Деактивировать',
+                    text: t('Деактивировать'),
                     style: 'destructive',
                     onPress: async () => {
                         try {
                             await apiFetch(`/users/${id}/deactivate/`, { method: 'POST' });
                             loadUsers();
                         } catch (error) {
-                            Alert.alert('Ошибка', 'Не удалось деактивировать пользователя');
+                            Alert.alert(t('Ошибка'), t('Не удалось деактивировать пользователя'));
                         }
                     },
                 },
@@ -117,7 +123,7 @@ export default function UsersScreen({ navigation }) {
                     </View>
                     <View style={[s.statusBadge, item.is_active ? s.activeBadge : s.inactiveBadge]}>
                         <Text style={[s.statusText, item.is_active ? s.activeText : s.inactiveText]}>
-                            {item.is_active ? 'Активен' : 'Неактивен'}
+                            {item.is_active ? t('Активен') : t('Неактивен')}
                         </Text>
                     </View>
                 </View>
@@ -129,7 +135,7 @@ export default function UsersScreen({ navigation }) {
                             onPress={() => handleDeactivate(item.id)}
                         >
                             <Ionicons name="close-circle-outline" size={16} color="#ef4444" />
-                            <Text style={s.deactivateText}>Деактивировать</Text>
+                            <Text style={s.deactivateText}>{t('Деактивировать')}</Text>
                         </TouchableOpacity>
                     ) : (
                         <TouchableOpacity
@@ -137,7 +143,7 @@ export default function UsersScreen({ navigation }) {
                             onPress={() => handleActivate(item.id)}
                         >
                             <Ionicons name="checkmark-circle-outline" size={16} color="#16a34a" />
-                            <Text style={s.activateText}>Активировать</Text>
+                            <Text style={s.activateText}>{t('Активировать')}</Text>
                         </TouchableOpacity>
                     )}
                 </View>
@@ -167,8 +173,8 @@ export default function UsersScreen({ navigation }) {
                         <Ionicons name="chevron-back" size={28} color="#333" />
                     </TouchableOpacity>
                     <View>
-                        <Text style={s.title}>Пользователи</Text>
-                        <Text style={s.subtitle}>{users.length} пользователей</Text>
+                        <Text style={s.title}>{t('Пользователи')}</Text>
+                        <Text style={s.subtitle}>{users.length} {t('пользователей')}</Text>
                     </View>
                     <View style={{ width: 28 }} />
                 </View>
@@ -177,7 +183,7 @@ export default function UsersScreen({ navigation }) {
                     <Ionicons name="search-outline" size={18} color="#94a3b8" style={s.searchIcon} />
                     <TextInput
                         style={s.searchInput}
-                        placeholder="Поиск по имени или email..."
+                        placeholder={t('Поиск по имени или email...')}
                         value={search}
                         onChangeText={setSearch}
                         placeholderTextColor="#94a3b8"
@@ -204,10 +210,11 @@ export default function UsersScreen({ navigation }) {
                     renderItem={renderItem}
                     contentContainerStyle={s.listContent}
                     showsVerticalScrollIndicator={false}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={MINT} />}
                     ListEmptyComponent={
                         <View style={s.emptyState}>
                             <Ionicons name="people-outline" size={48} color="#94a3b8" />
-                            <Text style={s.emptyTitle}>Нет пользователей</Text>
+                            <Text style={s.emptyTitle}>{t('Нет пользователей')}</Text>
                         </View>
                     }
                 />

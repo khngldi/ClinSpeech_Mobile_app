@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   ActivityIndicator, TextInput, Alert, Modal,
-  KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +19,7 @@ export default function ProfileScreen({ navigation }) {
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
@@ -31,7 +32,8 @@ export default function ProfileScreen({ navigation }) {
 
   useEffect(() => { loadProfile(); }, []);
 
-  const loadProfile = async () => {
+  const loadProfile = async (showLoader = true) => {
+    if (showLoader) setLoading(true);
     try {
       const res = await apiFetch('/me/');
       const data = await safeJson(res);
@@ -43,7 +45,15 @@ export default function ProfileScreen({ navigation }) {
         phone: data.phone || '',
         specialization: data.specialization || '',
       });
-    } catch {} finally { setLoading(false); }
+    } catch {} finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadProfile(false);
   };
 
   const handleUpdate = async () => {
@@ -113,7 +123,7 @@ export default function ProfileScreen({ navigation }) {
             });
           } catch {}
           await AsyncStorage.multiRemove(['access_token', 'refresh_token']);
-          navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
+          navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
         }
       },
     ]);
@@ -132,7 +142,11 @@ export default function ProfileScreen({ navigation }) {
     <View style={s.container}>
       <AnimatedGradientBackground />
       <SafeAreaView style={s.safeArea}>
-        <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={s.scroll}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={PRIMARY} />}
+        >
           <Text style={s.pageTitle}>{t('Профиль')}</Text>
 
         {success ? (

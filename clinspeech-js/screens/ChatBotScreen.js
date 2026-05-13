@@ -9,6 +9,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     ActivityIndicator,
+    RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +31,7 @@ export default function ChatBotScreen() {
     const [messages, setMessages] = useState([]);
     const [loading, setLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const flatListRef = useRef(null);
 
     useEffect(() => {
@@ -51,7 +53,13 @@ export default function ChatBotScreen() {
             }]);
         } finally {
             setInitialLoading(false);
+            setRefreshing(false);
         }
+    };
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        loadHistory();
     };
 
     const listData = useMemo(
@@ -89,7 +97,7 @@ export default function ChatBotScreen() {
                 return [...filtered, tempUserMsg, {
                     id: `bot-${Date.now()}`,
                     is_user: false,
-                    message: data.message || data.response || 'Спасибо за вопрос. Я обработаю его и отвечу.',
+                    message: data.message || data.response || t('Спасибо за вопрос. Я обработаю его и отвечу.'),
                 }];
             });
         } catch (error) {
@@ -165,6 +173,7 @@ export default function ChatBotScreen() {
                         style={s.list}
                         contentContainerStyle={s.listContent}
                         showsVerticalScrollIndicator={false}
+                        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={MINT} />}
                         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
                         renderItem={({ item }) => (
                             <View
@@ -191,9 +200,9 @@ export default function ChatBotScreen() {
                         ListEmptyComponent={
                             <View style={s.emptyState}>
                                 <Ionicons name="chatbubbles-outline" size={48} color="#94a3b8" />
-                                <Text style={s.emptyTitle}>Начните разговор</Text>
+                                <Text style={s.emptyTitle}>{t('Начните разговор')}</Text>
                                 <Text style={s.emptySubtitle}>
-                                    Напишите вопрос о здоровье или выберите один из быстрых запросов выше
+                                    {t('Напишите вопрос о здоровье или выберите один из быстрых запросов выше')}
                                 </Text>
                             </View>
                         }
@@ -201,14 +210,14 @@ export default function ChatBotScreen() {
 
                     {loading && (
                         <View style={s.typingIndicator}>
-                            <Text style={s.typingText}>AI печатает...</Text>
+                            <Text style={s.typingText}>{t('AI печатает...')}</Text>
                         </View>
                     )}
 
                     <View style={s.inputRow}>
                         <TextInput
                             style={s.input}
-                            placeholder="Напишите вопрос о здоровье..."
+                            placeholder={t('Напишите вопрос о здоровье...')}
                             placeholderTextColor="#94a3b8"
                             value={draft}
                             onChangeText={setDraft}
@@ -228,7 +237,7 @@ export default function ChatBotScreen() {
                     <View style={s.disclaimer}>
                         <Ionicons name="shield-checkmark-outline" size={14} color="#64748b" />
                         <Text style={s.disclaimerText}>
-                            AI может ошибаться. Для лечения всегда консультируйтесь с врачом.
+                            {t('AI может ошибаться. Для лечения всегда консультируйтесь с врачом.')}
                         </Text>
                     </View>
                 </KeyboardAvoidingView>

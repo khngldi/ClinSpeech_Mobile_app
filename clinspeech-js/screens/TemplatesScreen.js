@@ -12,49 +12,74 @@ import {
     Alert,
     ScrollView,
     Platform,
+    RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 import { apiFetch, safeJson } from '../api';
+import { useLocale } from '../i18n/LocaleContext';
+import { getFriendlyApiError } from '../utils/apiErrors';
 
 const MINT = '#2ec4b6';
 
-export default function TemplatesScreen() {
+export default function TemplatesScreen({ navigation }) {
+    const { t } = useLocale();
     const [templates, setTemplates] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [showModal, setShowModal] = useState(false);
+    const [detailsModal, setDetailsModal] = useState(null);
     const [editId, setEditId] = useState(null);
-    const [form, setForm] = useState({ name: '', template_data: '', is_public: false });
+    const [form, setForm] = useState({ name: '', description: '', specialty: '', template_data: '', is_public: false });
     const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
+    const [user, setUser] = useState(null);
 
     useEffect(() => {
+        apiFetch('/me/').then(safeJson).then(setUser).catch((err) => console.error('Template user load failed:', err));
         loadTemplates();
     }, []);
 
-    const loadTemplates = async () => {
-        setLoading(true);
+    const canManageTemplates = user?.role === 'doctor' || user?.role === 'admin';
+
+    const loadTemplates = async (showLoader = true) => {
+        if (showLoader) setLoading(true);
+        setError('');
         try {
             const res = await apiFetch('/templates/');
+            if (!res.ok) {
+                const payload = await safeJson(res);
+                throw { status: res.status, payload };
+            }
             const data = await safeJson(res);
             setTemplates(Array.isArray(data) ? data : (data?.results || []));
         } catch (error) {
-            console.log('Error loading templates:', error);
+            console.error('Templates load failed:', error);
+            setError(getFriendlyApiError(error, t, 'Не удалось загрузить шаблоны'));
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
+    };
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        loadTemplates(false);
     };
 
     const openCreate = () => {
         setEditId(null);
-        setForm({ name: '', template_data: '', is_public: false });
+        setForm({ name: '', description: '', specialty: '', template_data: '', is_public: false });
         setShowModal(true);
     };
 
     const openEdit = (template) => {
         setEditId(template.id);
         setForm({
-            name: template.name,
+            name: template.name || '',
+            description: template.description || '',
+            specialty: template.specialty || '',
             template_data: template.template_data || '',
             is_public: template.is_public || false,
         });
@@ -63,28 +88,36 @@ export default function TemplatesScreen() {
 
     const handleSubmit = async () => {
         if (!form.name || !form.template_data) {
-            Alert.alert('Ошибка', 'Заполните все обязательные поля');
+            Alert.alert(t('Ошибка'), t('Заполните все обязательные поля'));
             return;
         }
 
         setSaving(true);
         try {
             if (editId) {
-                await apiFetch(`/templates/${editId}/`, {
+                const res = await apiFetch(`/templates/${editId}/`, {
                     method: 'PATCH',
                     body: JSON.stringify(form),
                 });
+                if (!res.ok) {
+                    const payload = await safeJson(res);
+                    throw { status: res.status, payload };
+                }
             } else {
-                await apiFetch('/templates/', {
+                const res = await apiFetch('/templates/', {
                     method: 'POST',
                     body: JSON.stringify(form),
                 });
+                if (!res.ok) {
+                    const payload = await safeJson(res);
+                    throw { status: res.status, payload };
+                }
             }
             setShowModal(false);
             loadTemplates();
         } catch (error) {
-            console.log('Error saving template:', error);
-            Alert.alert('Ошибка', 'Не удалось сохранить шаблон');
+            console.error('Template save failed:', error);
+            Alert.alert(t('Ошибка'), getFriendlyApiError(error, t, 'Не удалось сохранить шаблон'));
         } finally {
             setSaving(false);
         }
@@ -92,20 +125,24 @@ export default function TemplatesScreen() {
 
     const handleDelete = (id) => {
         Alert.alert(
-            'Удалить шаблон',
-            'Вы уверены, что хотите удалить этот шаблон?',
+            t('Удалить шаблон?'),
+            t('Вы уверены, что хотите удалить этот шаблон?'),
             [
-                { text: 'Отмена', style: 'cancel' },
+                { text: t('Отмена'), style: 'cancel' },
                 {
-                    text: 'Удалить',
+                    text: t('Удалить'),
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            await apiFetch(`/templates/${id}/`, { method: 'DELETE' });
+                            const res = await apiFetch(`/templates/${id}/`, { method: 'DELETE' });
+                            if (!res.ok) {
+                                const payload = await safeJson(res);
+                                throw { status: res.status, payload };
+                            }
                             loadTemplates();
                         } catch (error) {
-                            console.log('Error deleting template:', error);
-                            Alert.alert('Ошибка', 'Не удалось удалить шаблон');
+                            console.error('Template delete failed:', error);
+                            Alert.alert(t('Ошибка'), getFriendlyApiError(error, t, 'Не удалось удалить шаблон'));
                         }
                     },
                 },
@@ -114,31 +151,34 @@ export default function TemplatesScreen() {
     };
 
     const renderItem = ({ item }) => (
-        <View style={s.templateCard}>
+        <TouchableOpacity style={s.templateCard} activeOpacity={0.82} onPress={() => setDetailsModal(item)}>
             <View style={s.cardHeader}>
                 <Text style={s.templateName} numberOfLines={1}>{item.name}</Text>
                 {item.is_public && (
                     <View style={s.publicBadge}>
-                        <Text style={s.publicBadgeText}>Публичный</Text>
+                        <Text style={s.publicBadgeText}>{t('Публичный')}</Text>
                     </View>
                 )}
             </View>
+            {item.specialty ? <Text style={s.templateSpecialty}>{item.specialty}</Text> : null}
             
             <Text style={s.templateContent} numberOfLines={4}>
-                {item.template_data || 'Нет содержимого'}
+                {item.description || item.template_data || t('Нет содержимого')}
             </Text>
             
-            <View style={s.cardActions}>
-                <TouchableOpacity style={s.editBtn} onPress={() => openEdit(item)}>
-                    <Ionicons name="pencil-outline" size={16} color="#64748b" />
-                    <Text style={s.editBtnText}>Изменить</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={s.deleteBtn} onPress={() => handleDelete(item.id)}>
-                    <Ionicons name="trash-outline" size={16} color="#ef4444" />
-                    <Text style={s.deleteBtnText}>Удалить</Text>
-                </TouchableOpacity>
-            </View>
-        </View>
+            {canManageTemplates && (
+                <View style={s.cardActions}>
+                    <TouchableOpacity style={s.editBtn} onPress={() => openEdit(item)}>
+                        <Ionicons name="pencil-outline" size={16} color="#64748b" />
+                        <Text style={s.editBtnText}>{t('Изменить')}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={s.deleteBtn} onPress={() => handleDelete(item.id)}>
+                        <Ionicons name="trash-outline" size={16} color="#ef4444" />
+                        <Text style={s.deleteBtnText}>{t('Удалить')}</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
+        </TouchableOpacity>
     );
 
     if (loading) {
@@ -159,15 +199,22 @@ export default function TemplatesScreen() {
             <AnimatedGradientBackground />
             <SafeAreaView style={s.safeArea}>
                 <View style={s.header}>
-                    <View>
-                        <Text style={s.title}>Шаблоны отчётов</Text>
-                        <Text style={s.subtitle}>{templates.length} шаблонов</Text>
-                    </View>
-                    <TouchableOpacity style={s.addBtn} onPress={openCreate}>
-                        <Ionicons name="add" size={20} color="#fff" />
-                        <Text style={s.addBtnText}>Новый шаблон</Text>
+                    <TouchableOpacity style={s.backBtn} onPress={() => navigation?.goBack()}>
+                        <Ionicons name="chevron-back" size={24} color="#334155" />
                     </TouchableOpacity>
+                    <View>
+                        <Text style={s.title}>{t('Шаблоны отчётов')}</Text>
+                        <Text style={s.subtitle}>{t('{{count}} шаблонов', '{{count}} шаблонов', { count: templates.length })}</Text>
+                    </View>
+                    {canManageTemplates ? (
+                        <TouchableOpacity style={s.addBtn} onPress={openCreate}>
+                            <Ionicons name="add" size={20} color="#fff" />
+                            <Text style={s.addBtnText}>{t('Новый шаблон')}</Text>
+                        </TouchableOpacity>
+                    ) : <View style={{ width: 42 }} />}
                 </View>
+
+                {error ? <Text style={s.errorBanner}>{error}</Text> : null}
 
                 <FlatList
                     data={templates}
@@ -176,12 +223,15 @@ export default function TemplatesScreen() {
                     contentContainerStyle={s.listContent}
                     numColumns={1}
                     showsVerticalScrollIndicator={false}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={MINT} />}
                     ListEmptyComponent={
                         <View style={s.emptyState}>
                             <Ionicons name="document-text-outline" size={48} color="#94a3b8" />
-                            <Text style={s.emptyTitle}>Нет шаблонов</Text>
+                            <Text style={s.emptyTitle}>{t('Нет шаблонов')}</Text>
                             <Text style={s.emptySubtitle}>
-                                Создайте шаблон для автоматического форматирования отчётов
+                                {canManageTemplates
+                                    ? t('Создайте шаблон для автоматического форматирования отчётов')
+                                    : t('Шаблоны пока недоступны')}
                             </Text>
                         </View>
                     }
@@ -198,7 +248,7 @@ export default function TemplatesScreen() {
                         <View style={s.modalContent}>
                             <View style={s.modalHeader}>
                                 <Text style={s.modalTitle}>
-                                    {editId ? 'Редактирование' : 'Новый шаблон'}
+                                    {editId ? t('Редактирование') : t('Новый шаблон')}
                                 </Text>
                                 <TouchableOpacity onPress={() => setShowModal(false)}>
                                     <Ionicons name="close" size={24} color="#64748b" />
@@ -206,18 +256,39 @@ export default function TemplatesScreen() {
                             </View>
 
                             <ScrollView style={s.modalBody}>
-                                <Text style={s.inputLabel}>Название *</Text>
+                                <Text style={s.inputLabel}>{t('Название')} *</Text>
                                 <TextInput
                                     style={s.input}
-                                    placeholder="Название шаблона"
+                                    placeholder={t('Название шаблона')}
+                                    placeholderTextColor="#94a3b8"
                                     value={form.name}
                                     onChangeText={(text) => setForm({ ...form, name: text })}
                                 />
 
-                                <Text style={s.inputLabel}>Содержимое шаблона *</Text>
+                                <Text style={s.inputLabel}>{t('Специальность')}</Text>
+                                <TextInput
+                                    style={s.input}
+                                    placeholder={t('Например, терапия')}
+                                    placeholderTextColor="#94a3b8"
+                                    value={form.specialty}
+                                    onChangeText={(text) => setForm({ ...form, specialty: text })}
+                                />
+
+                                <Text style={s.inputLabel}>{t('Описание')}</Text>
+                                <TextInput
+                                    style={[s.input, { minHeight: 70, textAlignVertical: 'top' }]}
+                                    placeholder={t('Краткое описание шаблона')}
+                                    placeholderTextColor="#94a3b8"
+                                    value={form.description}
+                                    onChangeText={(text) => setForm({ ...form, description: text })}
+                                    multiline
+                                />
+
+                                <Text style={s.inputLabel}>{t('Содержимое шаблона')} *</Text>
                                 <TextInput
                                     style={[s.input, s.textArea]}
-                                    placeholder="Введите текст шаблона..."
+                                    placeholder={t('Введите текст шаблона...')}
+                                    placeholderTextColor="#94a3b8"
                                     value={form.template_data}
                                     onChangeText={(text) => setForm({ ...form, template_data: text })}
                                     multiline
@@ -225,7 +296,7 @@ export default function TemplatesScreen() {
                                 />
 
                                 <View style={s.switchRow}>
-                                    <Text style={s.switchLabel}>Публичный шаблон</Text>
+                                    <Text style={s.switchLabel}>{t('Публичный шаблон')}</Text>
                                     <Switch
                                         value={form.is_public}
                                         onValueChange={(value) => setForm({ ...form, is_public: value })}
@@ -240,7 +311,7 @@ export default function TemplatesScreen() {
                                     style={s.cancelButton}
                                     onPress={() => setShowModal(false)}
                                 >
-                                    <Text style={s.cancelButtonText}>Отмена</Text>
+                                    <Text style={s.cancelButtonText}>{t('Отмена')}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     style={[s.createButton, saving && s.createButtonDisabled]}
@@ -248,10 +319,30 @@ export default function TemplatesScreen() {
                                     disabled={saving}
                                 >
                                     <Text style={s.createButtonText}>
-                                        {saving ? 'Сохранение...' : (editId ? 'Сохранить' : 'Создать')}
+                                        {saving ? t('Сохранение...') : (editId ? t('Сохранить') : t('Создать'))}
                                     </Text>
                                 </TouchableOpacity>
                             </View>
+                        </View>
+                    </View>
+                </Modal>
+
+                <Modal visible={!!detailsModal} animationType="fade" transparent onRequestClose={() => setDetailsModal(null)}>
+                    <View style={s.detailOverlay}>
+                        <View style={s.detailModal}>
+                            <View style={s.modalHeader}>
+                                <Text style={s.modalTitle}>{detailsModal?.name}</Text>
+                                <TouchableOpacity onPress={() => setDetailsModal(null)}>
+                                    <Ionicons name="close" size={24} color="#64748b" />
+                                </TouchableOpacity>
+                            </View>
+                            <ScrollView style={s.modalBody}>
+                                {detailsModal?.is_public ? <Text style={s.detailBadge}>{t('Публичный')}</Text> : null}
+                                {detailsModal?.specialty ? <Text style={s.detailMeta}>{t('Специальность')}: {detailsModal.specialty}</Text> : null}
+                                {detailsModal?.description ? <Text style={s.detailDescription}>{detailsModal.description}</Text> : null}
+                                <Text style={s.inputLabel}>{t('Содержимое')}</Text>
+                                <Text style={s.detailContent}>{detailsModal?.template_data || t('Нет содержимого')}</Text>
+                            </ScrollView>
                         </View>
                     </View>
                 </Modal>
@@ -267,12 +358,14 @@ const s = StyleSheet.create({
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
+        alignItems: 'center',
         paddingHorizontal: 16,
         paddingTop: 10,
         paddingBottom: 12,
+        gap: 10,
     },
-    title: { fontSize: 26, fontWeight: '700', color: '#1a1a2e' },
+    backBtn: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.9)', borderWidth: 1, borderColor: '#e2e8f0' },
+    title: { fontSize: 24, fontWeight: '700', color: '#1a1a2e' },
     subtitle: { marginTop: 4, fontSize: 13, color: '#64748b' },
     addBtn: {
         flexDirection: 'row',
@@ -284,6 +377,7 @@ const s = StyleSheet.create({
         borderRadius: 10,
     },
     addBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+    errorBanner: { marginHorizontal: 16, marginBottom: 10, color: '#dc2626', backgroundColor: '#fef2f2', borderRadius: 10, padding: 12, overflow: 'hidden' },
     listContent: { paddingHorizontal: 16, paddingBottom: 100, gap: 12 },
     templateCard: {
         backgroundColor: 'rgba(255,255,255,0.9)',
@@ -299,6 +393,7 @@ const s = StyleSheet.create({
         marginBottom: 10,
     },
     templateName: { fontSize: 16, fontWeight: '600', color: '#1f2937', flex: 1 },
+    templateSpecialty: { fontSize: 12, color: '#0f766e', fontWeight: '600', marginBottom: 8 },
     publicBadge: {
         backgroundColor: '#dbeafe',
         paddingHorizontal: 8,
@@ -414,4 +509,40 @@ const s = StyleSheet.create({
     },
     createButtonDisabled: { backgroundColor: '#94a3b8' },
     createButtonText: { fontSize: 15, fontWeight: '600', color: '#fff' },
+    detailOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(15,23,42,0.45)',
+        justifyContent: 'center',
+        padding: 18,
+    },
+    detailModal: {
+        backgroundColor: '#fff',
+        borderRadius: 18,
+        maxHeight: '82%',
+        overflow: 'hidden',
+    },
+    detailBadge: {
+        alignSelf: 'flex-start',
+        backgroundColor: '#dbeafe',
+        color: '#1d4ed8',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: '700',
+        marginBottom: 10,
+    },
+    detailMeta: { fontSize: 13, color: '#64748b', marginBottom: 10 },
+    detailDescription: { fontSize: 14, color: '#334155', lineHeight: 20, marginBottom: 12 },
+    detailContent: {
+        fontSize: 13,
+        color: '#1f2937',
+        lineHeight: 20,
+        backgroundColor: '#f8fafc',
+        borderRadius: 12,
+        padding: 12,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        marginBottom: 16,
+    },
 });

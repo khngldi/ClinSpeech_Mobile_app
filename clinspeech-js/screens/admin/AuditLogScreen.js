@@ -6,6 +6,7 @@ import {
     FlatList,
     TouchableOpacity,
     ActivityIndicator,
+    RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,33 +16,32 @@ import { useLocale } from '../../i18n/LocaleContext';
 
 const MINT = '#2ec4b6';
 
-const ACTION_COLORS = {
-    create: { bg: '#dcfce7', text: '#16a34a', label: 'Создание' },
-    update: { bg: '#dbeafe', text: '#1d4ed8', label: 'Обновление' },
-    delete: { bg: '#fee2e2', text: '#dc2626', label: 'Удаление' },
-    login: { bg: '#f3f4f6', text: '#6b7280', label: 'Вход' },
-    view: { bg: '#f3f4f6', text: '#6b7280', label: 'Просмотр' },
-    download: { bg: '#fef3c7', text: '#d97706', label: 'Скачивание' },
-};
-
-const ACTION_FILTERS = [
-    { key: '', label: 'Все' },
-    { key: 'create', label: 'Создание' },
-    { key: 'update', label: 'Обновление' },
-    { key: 'delete', label: 'Удаление' },
-    { key: 'login', label: 'Вход' },
-];
-
 export default function AuditLogScreen({ navigation }) {
-    const { formatDateTime } = useLocale();
+    const { t, formatDateTime } = useLocale();
+    const ACTION_COLORS = {
+        create: { bg: '#dcfce7', text: '#16a34a', label: t('Создание') },
+        update: { bg: '#dbeafe', text: '#1d4ed8', label: t('Обновление') },
+        delete: { bg: '#fee2e2', text: '#dc2626', label: t('Удаление') },
+        login: { bg: '#f3f4f6', text: '#6b7280', label: t('Вход') },
+        view: { bg: '#f3f4f6', text: '#6b7280', label: t('Просмотр') },
+        download: { bg: '#fef3c7', text: '#d97706', label: t('Скачивание') },
+    };
+    const ACTION_FILTERS = [
+        { key: '', label: t('Все') },
+        { key: 'create', label: t('Создание') },
+        { key: 'update', label: t('Обновление') },
+        { key: 'delete', label: t('Удаление') },
+        { key: 'login', label: t('Вход') },
+    ];
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [actionFilter, setActionFilter] = useState('');
     const [page, setPage] = useState(1);
     const [hasNext, setHasNext] = useState(false);
 
-    const loadLogs = useCallback(async () => {
-        setLoading(true);
+    const loadLogs = useCallback(async (showLoader = true) => {
+        if (showLoader) setLoading(true);
         try {
             let url = `/audit-log/?page=${page}`;
             if (actionFilter) url += `&action=${actionFilter}`;
@@ -57,9 +57,10 @@ export default function AuditLogScreen({ navigation }) {
                 setHasNext(false);
             }
         } catch (error) {
-            console.log('Error loading audit logs:', error);
+            console.error('Audit logs load failed:', error);
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     }, [page, actionFilter]);
 
@@ -71,6 +72,11 @@ export default function AuditLogScreen({ navigation }) {
         setActionFilter(filter);
         setPage(1);
     };
+
+    const onRefresh = useCallback(() => {
+        setRefreshing(true);
+        loadLogs(false);
+    }, [loadLogs]);
 
     const renderItem = ({ item }) => {
         const action = ACTION_COLORS[item.action] || ACTION_COLORS.view;
@@ -87,7 +93,7 @@ export default function AuditLogScreen({ navigation }) {
                 </View>
                 
                 <View style={s.logContent}>
-                    <Text style={s.userName}>{item.user_name || item.user || 'Система'}</Text>
+                    <Text style={s.userName}>{item.user_name || item.user || t('Система')}</Text>
                     <Text style={s.objectInfo}>
                         {item.object_type || item.entity_type}
                         {(item.object_id || item.entity_id) && ` #${item.object_id || item.entity_id}`}
@@ -110,8 +116,8 @@ export default function AuditLogScreen({ navigation }) {
                         <Ionicons name="chevron-back" size={28} color="#333" />
                     </TouchableOpacity>
                     <View>
-                        <Text style={s.title}>Журнал аудита</Text>
-                        <Text style={s.subtitle}>Действия пользователей</Text>
+                        <Text style={s.title}>{t('Журнал аудита')}</Text>
+                        <Text style={s.subtitle}>{t('Действия пользователей')}</Text>
                     </View>
                     <View style={{ width: 28 }} />
                 </View>
@@ -142,10 +148,11 @@ export default function AuditLogScreen({ navigation }) {
                             renderItem={renderItem}
                             contentContainerStyle={s.listContent}
                             showsVerticalScrollIndicator={false}
+                            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={MINT} />}
                             ListEmptyComponent={
                                 <View style={s.emptyState}>
                                     <Ionicons name="document-text-outline" size={48} color="#94a3b8" />
-                                    <Text style={s.emptyTitle}>Нет записей</Text>
+                                    <Text style={s.emptyTitle}>{t('Нет записей')}</Text>
                                 </View>
                             }
                         />
@@ -157,17 +164,17 @@ export default function AuditLogScreen({ navigation }) {
                                 disabled={page <= 1}
                             >
                                 <Ionicons name="chevron-back" size={18} color={page <= 1 ? '#94a3b8' : '#1f2937'} />
-                                <Text style={[s.pageBtnText, page <= 1 && s.pageBtnTextDisabled]}>Назад</Text>
+                                <Text style={[s.pageBtnText, page <= 1 && s.pageBtnTextDisabled]}>{t('Назад')}</Text>
                             </TouchableOpacity>
                             
-                            <Text style={s.pageInfo}>Страница {page}</Text>
+                            <Text style={s.pageInfo}>{t('Страница')} {page}</Text>
                             
                             <TouchableOpacity
                                 style={[s.pageBtn, !hasNext && s.pageBtnDisabled]}
                                 onPress={() => setPage(p => p + 1)}
                                 disabled={!hasNext}
                             >
-                                <Text style={[s.pageBtnText, !hasNext && s.pageBtnTextDisabled]}>Далее</Text>
+                                <Text style={[s.pageBtnText, !hasNext && s.pageBtnTextDisabled]}>{t('Далее')}</Text>
                                 <Ionicons name="chevron-forward" size={18} color={!hasNext ? '#94a3b8' : '#1f2937'} />
                             </TouchableOpacity>
                         </View>

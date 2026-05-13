@@ -11,27 +11,57 @@ import {
     TextInput,
     Alert,
     ScrollView,
+    Platform,
+    KeyboardAvoidingView,
 } from 'react-native';
+import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 import { apiFetch, safeJson } from '../api';
+import { useLocale } from '../i18n/LocaleContext';
+import { getFriendlyApiError } from '../utils/apiErrors';
 
 const MINT = '#2ec4b6';
-
-const STATUS_COLORS = {
-    scheduled: { bg: '#dbeafe', text: '#1d4ed8', label: 'Запланировано' },
-    completed: { bg: '#dcfce7', text: '#16a34a', label: 'Завершено' },
-    cancelled: { bg: '#f3f4f6', text: '#6b7280', label: 'Отменено' },
+const pad = (value) => String(value).padStart(2, '0');
+const toISODate = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+const toTimeValue = (date) => `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+const getTodayDate = () => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    return date;
+};
+const parseDateValue = (value) => {
+    if (!value) return getTodayDate();
+    const parts = String(value).split('-').map(Number);
+    if (parts.length === 3 && parts.every(Boolean)) {
+        return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+    return getTodayDate();
+};
+const parseTimeValue = (value) => {
+    const date = new Date();
+    const [hours, minutes] = String(value || '').split(':').map(Number);
+    if (Number.isFinite(hours)) date.setHours(hours);
+    if (Number.isFinite(minutes)) date.setMinutes(minutes);
+    date.setSeconds(0);
+    date.setMilliseconds(0);
+    return date;
 };
 
-const TABS = [
-    { key: 'upcoming', label: 'Предстоящие' },
-    { key: 'today', label: 'Сегодня' },
-    { key: 'all', label: 'Все' },
-];
-
 export default function AppointmentsScreen() {
+    const { t, formatDate, formatTime } = useLocale();
+    const STATUS_COLORS = {
+        scheduled: { bg: '#dbeafe', text: '#1d4ed8', label: t('Запланировано') },
+        completed: { bg: '#dcfce7', text: '#16a34a', label: t('Завершено') },
+        cancelled: { bg: '#f3f4f6', text: '#6b7280', label: t('Отменено') },
+    };
+    const TABS = [
+        { key: 'upcoming', label: t('Предстоящие') },
+        { key: 'today', label: t('Сегодня') },
+        { key: 'all', label: t('Все') },
+    ];
     const [appointments, setAppointments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -40,6 +70,8 @@ export default function AppointmentsScreen() {
     const [patients, setPatients] = useState([]);
     const [selectedPatient, setSelectedPatient] = useState(null);
     const [showPatientPicker, setShowPatientPicker] = useState(false);
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [showTimePicker, setShowTimePicker] = useState(false);
     const [form, setForm] = useState({ date: '', time: '', notes: '' });
     const [saving, setSaving] = useState(false);
 
@@ -48,8 +80,15 @@ export default function AppointmentsScreen() {
         loadPatients();
     }, [activeTab]);
 
-    const loadAppointments = async () => {
-        setLoading(true);
+    useFocusEffect(
+        useCallback(() => {
+            loadAppointments(false);
+            loadPatients();
+        }, [activeTab])
+    );
+
+    const loadAppointments = async (showLoader = true) => {
+        if (showLoader) setLoading(true);
         try {
             let endpoint = '/appointments/';
             if (activeTab === 'today') {
@@ -62,7 +101,7 @@ export default function AppointmentsScreen() {
             const data = await safeJson(res);
             setAppointments(Array.isArray(data) ? data : (data?.results || []));
         } catch (error) {
-            console.log('Error loading appointments:', error);
+            console.error('Appointments load failed:', error);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -75,25 +114,99 @@ export default function AppointmentsScreen() {
             const data = await safeJson(res);
             setPatients(Array.isArray(data) ? data : (data?.results || []));
         } catch (error) {
-            console.log('Error loading patients:', error);
+            console.error('Appointment patients load failed:', error);
         }
     };
 
     const onRefresh = useCallback(() => {
         setRefreshing(true);
-        loadAppointments();
+        Promise.all([loadAppointments(false), loadPatients()]).finally(() => setRefreshing(false));
     }, [activeTab]);
+
+    const openCreateModal = () => {
+        setForm({ date: '', time: '', notes: '' });
+        setSelectedPatient(null);
+        setShowPatientPicker(false);
+        setShowDatePicker(false);
+        setShowTimePicker(false);
+        setShowCreateModal(true);
+    };
+
+    const closeCreateModal = () => {
+        setShowCreateModal(false);
+        setShowPatientPicker(false);
+        setShowDatePicker(false);
+        setShowTimePicker(false);
+    };
+
+    const handleDateChange = (event, selectedDate) => {
+        if (Platform.OS !== 'ios') setShowDatePicker(false);
+        if (event?.type === 'dismissed') return;
+        if (selectedDate) {
+            setForm((prev) => ({ ...prev, date: toISODate(selectedDate) }));
+        }
+    };
+
+    const handleTimeChange = (event, selectedTime) => {
+        if (Platform.OS !== 'ios') setShowTimePicker(false);
+        if (event?.type === 'dismissed') return;
+        if (selectedTime) {
+            setForm((prev) => ({ ...prev, time: toTimeValue(selectedTime) }));
+        }
+    };
+
+    const openDatePicker = () => {
+        setShowPatientPicker(false);
+        setShowTimePicker(false);
+
+        const minimumDate = getTodayDate();
+        let value = parseDateValue(form.date);
+        if (value < minimumDate) value = minimumDate;
+        if (Platform.OS === 'android') {
+            DateTimePickerAndroid.open({
+                value,
+                mode: 'date',
+                display: 'calendar',
+                minimumDate,
+                onChange: handleDateChange,
+            });
+            return;
+        }
+
+        if (!form.date) setForm((prev) => ({ ...prev, date: toISODate(value) }));
+        setShowDatePicker(true);
+    };
+
+    const openTimePicker = () => {
+        setShowPatientPicker(false);
+        setShowDatePicker(false);
+
+        const value = parseTimeValue(form.time);
+        if (Platform.OS === 'android') {
+            DateTimePickerAndroid.open({
+                value,
+                mode: 'time',
+                display: 'clock',
+                is24Hour: true,
+                onChange: handleTimeChange,
+            });
+            return;
+        }
+
+        if (!form.time) setForm((prev) => ({ ...prev, time: toTimeValue(value) }));
+        setShowTimePicker(true);
+    };
 
     const handleCreate = async () => {
         if (!selectedPatient || !form.date || !form.time) {
-            Alert.alert('Ошибка', 'Заполните все обязательные поля');
+            Alert.alert(t('Ошибка'), t('Заполните все обязательные поля'));
             return;
         }
 
         setSaving(true);
         try {
             const datetime = `${form.date}T${form.time}:00`;
-            await apiFetch('/appointments/', {
+            const res = await apiFetch('/appointments/', {
                 method: 'POST',
                 body: JSON.stringify({
                     patient: selectedPatient.id,
@@ -101,13 +214,17 @@ export default function AppointmentsScreen() {
                     notes: form.notes,
                 }),
             });
-            setShowCreateModal(false);
+            if (!res.ok) {
+                const payload = await safeJson(res);
+                throw { status: res.status, payload };
+            }
+            closeCreateModal();
             setForm({ date: '', time: '', notes: '' });
             setSelectedPatient(null);
             loadAppointments();
         } catch (error) {
-            console.log('Error creating appointment:', error);
-            Alert.alert('Ошибка', 'Не удалось создать запись');
+            console.error('Appointment create failed:', error);
+            Alert.alert(t('Ошибка'), getFriendlyApiError(error, t, 'Не удалось создать запись'));
         } finally {
             setSaving(false);
         }
@@ -115,20 +232,24 @@ export default function AppointmentsScreen() {
 
     const handleCancel = async (id) => {
         Alert.alert(
-            'Отменить приём',
-            'Вы уверены, что хотите отменить этот приём?',
+            t('Отменить приём'),
+            t('Вы уверены, что хотите отменить этот приём?'),
             [
-                { text: 'Нет', style: 'cancel' },
+                { text: t('Нет'), style: 'cancel' },
                 {
-                    text: 'Да, отменить',
+                    text: t('Да, отменить'),
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            await apiFetch(`/appointments/${id}/cancel/`, { method: 'POST' });
+                            const res = await apiFetch(`/appointments/${id}/cancel/`, { method: 'POST' });
+                            if (!res.ok) {
+                                const payload = await safeJson(res);
+                                throw { status: res.status, payload };
+                            }
                             loadAppointments();
                         } catch (error) {
-                            console.log('Error cancelling appointment:', error);
-                            Alert.alert('Ошибка', 'Не удалось отменить приём');
+                            console.error('Appointment cancel failed:', error);
+                            Alert.alert(t('Ошибка'), getFriendlyApiError(error, t, 'Не удалось отменить приём'));
                         }
                     },
                 },
@@ -138,31 +259,16 @@ export default function AppointmentsScreen() {
 
     const handleComplete = async (id) => {
         try {
-            await apiFetch(`/appointments/${id}/complete/`, { method: 'POST' });
+            const res = await apiFetch(`/appointments/${id}/complete/`, { method: 'POST' });
+            if (!res.ok) {
+                const payload = await safeJson(res);
+                throw { status: res.status, payload };
+            }
             loadAppointments();
         } catch (error) {
-            console.log('Error completing appointment:', error);
-            Alert.alert('Ошибка', 'Не удалось завершить приём');
+            console.error('Appointment complete failed:', error);
+            Alert.alert(t('Ошибка'), getFriendlyApiError(error, t, 'Не удалось завершить приём'));
         }
-    };
-
-    const formatDate = (dateString) => {
-        if (!dateString) return '';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('ru-RU', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-        });
-    };
-
-    const formatTime = (dateString) => {
-        if (!dateString) return '';
-        const date = new Date(dateString);
-        return date.toLocaleTimeString('ru-RU', {
-            hour: '2-digit',
-            minute: '2-digit',
-        });
     };
 
     const renderItem = ({ item }) => {
@@ -172,12 +278,12 @@ export default function AppointmentsScreen() {
             <View style={s.appointmentCard}>
                 <View style={s.cardContent}>
                     <Text style={s.patientName}>
-                        {item.patient_name || `Пациент #${item.patient}`}
+                        {item.patient_name || `${t('Пациент')} #${item.patient}`}
                     </Text>
                     <View style={s.dateRow}>
                         <Ionicons name="calendar-outline" size={14} color="#64748b" />
                         <Text style={s.dateText}>
-                            {formatDate(item.scheduled_at)} в {formatTime(item.scheduled_at)}
+                            {formatDate(item.scheduled_at)} {t('в')} {formatTime(item.scheduled_at)}
                         </Text>
                     </View>
                     {item.notes && (
@@ -217,12 +323,12 @@ export default function AppointmentsScreen() {
             <SafeAreaView style={s.safeArea}>
                 <View style={s.header}>
                     <View>
-                        <Text style={s.title}>Расписание</Text>
-                        <Text style={s.subtitle}>Приёмы и записи</Text>
+                        <Text style={s.title}>{t('Расписание')}</Text>
+                        <Text style={s.subtitle}>{t('Приёмы и записи')}</Text>
                     </View>
-                    <TouchableOpacity style={s.addBtn} onPress={() => setShowCreateModal(true)}>
+                    <TouchableOpacity style={s.addBtn} onPress={openCreateModal}>
                         <Ionicons name="add" size={20} color="#fff" />
-                        <Text style={s.addBtnText}>Новый приём</Text>
+                        <Text style={s.addBtnText}>{t('Новый приём')}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -261,8 +367,8 @@ export default function AppointmentsScreen() {
                         ListEmptyComponent={
                             <View style={s.emptyState}>
                                 <Ionicons name="calendar-outline" size={48} color="#94a3b8" />
-                                <Text style={s.emptyTitle}>Нет приёмов</Text>
-                                <Text style={s.emptySubtitle}>Запланируйте новый приём</Text>
+                                <Text style={s.emptyTitle}>{t('Нет приёмов')}</Text>
+                                <Text style={s.emptySubtitle}>{t('Запланируйте новый приём')}</Text>
                             </View>
                         }
                     />
@@ -273,51 +379,148 @@ export default function AppointmentsScreen() {
                     visible={showCreateModal}
                     animationType="slide"
                     transparent={true}
-                    onRequestClose={() => setShowCreateModal(false)}
+                    onRequestClose={closeCreateModal}
                 >
                     <View style={s.modalOverlay}>
+                        <KeyboardAvoidingView
+                            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                            keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
+                            style={s.modalKeyboard}
+                        >
                         <View style={s.modalContent}>
                             <View style={s.modalHeader}>
-                                <Text style={s.modalTitle}>Новый приём</Text>
-                                <TouchableOpacity onPress={() => setShowCreateModal(false)}>
+                                <Text style={s.modalTitle}>{t('Новый приём')}</Text>
+                                <TouchableOpacity onPress={closeCreateModal}>
                                     <Ionicons name="close" size={24} color="#64748b" />
                                 </TouchableOpacity>
                             </View>
 
-                            <ScrollView style={s.modalBody}>
-                                <Text style={s.inputLabel}>Пациент *</Text>
+                            <ScrollView
+                                style={s.modalBody}
+                                contentContainerStyle={s.modalBodyContent}
+                                keyboardShouldPersistTaps="handled"
+                                showsVerticalScrollIndicator={false}
+                            >
+                                <Text style={s.inputLabel}>{t('Пациент')} *</Text>
                                 <TouchableOpacity
                                     style={s.pickerBtn}
-                                    onPress={() => setShowPatientPicker(true)}
+                                    onPress={() => {
+                                        setShowDatePicker(false);
+                                        setShowTimePicker(false);
+                                        setShowPatientPicker((value) => !value);
+                                    }}
+                                    activeOpacity={0.8}
                                 >
                                     <Text style={selectedPatient ? s.pickerText : s.pickerPlaceholder}>
                                         {selectedPatient
                                             ? `${selectedPatient.last_name} ${selectedPatient.first_name}`
-                                            : 'Выберите пациента...'}
+                                            : t('Выберите пациента...')}
                                     </Text>
+                                    <Ionicons name={showPatientPicker ? 'chevron-up' : 'chevron-down'} size={20} color="#64748b" />
+                                </TouchableOpacity>
+                                {showPatientPicker && (
+                                    <View style={s.inlinePicker}>
+                                        <ScrollView
+                                            nestedScrollEnabled
+                                            keyboardShouldPersistTaps="handled"
+                                            style={s.inlinePickerList}
+                                        >
+                                            {patients.length === 0 ? (
+                                                <Text style={s.patientPickerEmpty}>{t('Пациенты не найдены')}</Text>
+                                            ) : patients.map((item) => (
+                                                <TouchableOpacity
+                                                    key={item.id}
+                                                    style={[
+                                                        s.patientPickerItem,
+                                                        selectedPatient?.id === item.id && s.patientPickerItemSelected,
+                                                    ]}
+                                                    onPress={() => {
+                                                        setSelectedPatient(item);
+                                                        setShowPatientPicker(false);
+                                                    }}
+                                                    activeOpacity={0.75}
+                                                >
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text style={s.patientItemText}>
+                                                            {item.last_name} {item.first_name}
+                                                        </Text>
+                                                        {item.birth_date && (
+                                                            <Text style={s.patientItemDate}>{formatDate(item.birth_date)}</Text>
+                                                        )}
+                                                    </View>
+                                                    {selectedPatient?.id === item.id && (
+                                                        <Ionicons name="checkmark-circle" size={20} color={MINT} />
+                                                    )}
+                                                </TouchableOpacity>
+                                            ))}
+                                        </ScrollView>
+                                    </View>
+                                )}
+
+                                <Text style={s.inputLabel}>{t('Дата')} *</Text>
+                                <TouchableOpacity style={s.datePickerBtn} onPress={openDatePicker} activeOpacity={0.8}>
+                                    <View style={s.datePickerLeft}>
+                                        <Ionicons name="calendar-outline" size={18} color={MINT} />
+                                        <Text style={form.date ? s.pickerText : s.pickerPlaceholder}>
+                                            {form.date ? formatDate(form.date) : t('Выберите дату')}
+                                        </Text>
+                                    </View>
                                     <Ionicons name="chevron-down" size={20} color="#64748b" />
                                 </TouchableOpacity>
+                                {Platform.OS === 'ios' && showDatePicker && (
+                                    <View style={s.iosPickerFrame}>
+                                        <DateTimePicker
+                                            value={parseDateValue(form.date)}
+                                            mode="date"
+                                            display="spinner"
+                                            minimumDate={getTodayDate()}
+                                            textColor="#111827"
+                                            accentColor={MINT}
+                                            themeVariant="light"
+                                            locale="ru-RU"
+                                            style={s.iosPicker}
+                                            onChange={handleDateChange}
+                                        />
+                                        <TouchableOpacity style={s.pickerDoneBtn} onPress={() => setShowDatePicker(false)}>
+                                            <Text style={s.pickerDoneText}>{t('Готово')}</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
 
-                                <Text style={s.inputLabel}>Дата *</Text>
-                                <TextInput
-                                    style={s.input}
-                                    placeholder="ГГГГ-ММ-ДД"
-                                    value={form.date}
-                                    onChangeText={(text) => setForm({ ...form, date: text })}
-                                />
+                                <Text style={s.inputLabel}>{t('Время')} *</Text>
+                                <TouchableOpacity style={s.datePickerBtn} onPress={openTimePicker} activeOpacity={0.8}>
+                                    <View style={s.datePickerLeft}>
+                                        <Ionicons name="time-outline" size={18} color={MINT} />
+                                        <Text style={form.time ? s.pickerText : s.pickerPlaceholder}>
+                                            {form.time || t('Выберите время')}
+                                        </Text>
+                                    </View>
+                                    <Ionicons name="chevron-down" size={20} color="#64748b" />
+                                </TouchableOpacity>
+                                {Platform.OS === 'ios' && showTimePicker && (
+                                    <View style={s.iosPickerFrame}>
+                                        <DateTimePicker
+                                            value={parseTimeValue(form.time)}
+                                            mode="time"
+                                            display="spinner"
+                                            is24Hour
+                                            textColor="#111827"
+                                            accentColor={MINT}
+                                            themeVariant="light"
+                                            locale="ru-RU"
+                                            style={s.iosPicker}
+                                            onChange={handleTimeChange}
+                                        />
+                                        <TouchableOpacity style={s.pickerDoneBtn} onPress={() => setShowTimePicker(false)}>
+                                            <Text style={s.pickerDoneText}>{t('Готово')}</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
 
-                                <Text style={s.inputLabel}>Время *</Text>
-                                <TextInput
-                                    style={s.input}
-                                    placeholder="ЧЧ:ММ"
-                                    value={form.time}
-                                    onChangeText={(text) => setForm({ ...form, time: text })}
-                                />
-
-                                <Text style={s.inputLabel}>Заметки</Text>
+                                <Text style={s.inputLabel}>{t('Заметки')}</Text>
                                 <TextInput
                                     style={[s.input, s.textArea]}
-                                    placeholder="Дополнительная информация..."
+                                    placeholder={t('Дополнительная информация...')}
                                     value={form.notes}
                                     onChangeText={(text) => setForm({ ...form, notes: text })}
                                     multiline
@@ -328,9 +531,9 @@ export default function AppointmentsScreen() {
                             <View style={s.modalFooter}>
                                 <TouchableOpacity
                                     style={s.cancelButton}
-                                    onPress={() => setShowCreateModal(false)}
+                                    onPress={closeCreateModal}
                                 >
-                                    <Text style={s.cancelButtonText}>Отмена</Text>
+                                    <Text style={s.cancelButtonText}>{t('Отмена')}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     style={[s.createButton, saving && s.createButtonDisabled]}
@@ -338,51 +541,12 @@ export default function AppointmentsScreen() {
                                     disabled={saving}
                                 >
                                     <Text style={s.createButtonText}>
-                                        {saving ? 'Создание...' : 'Создать'}
+                                        {saving ? t('Создание...') : t('Создать')}
                                     </Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
-                    </View>
-                </Modal>
-
-                {/* Patient Picker Modal */}
-                <Modal
-                    visible={showPatientPicker}
-                    animationType="slide"
-                    transparent={true}
-                    onRequestClose={() => setShowPatientPicker(false)}
-                >
-                    <View style={s.modalOverlay}>
-                        <View style={s.modalContent}>
-                            <View style={s.modalHeader}>
-                                <Text style={s.modalTitle}>Выберите пациента</Text>
-                                <TouchableOpacity onPress={() => setShowPatientPicker(false)}>
-                                    <Ionicons name="close" size={24} color="#64748b" />
-                                </TouchableOpacity>
-                            </View>
-                            <FlatList
-                                data={patients}
-                                keyExtractor={(item) => String(item.id)}
-                                renderItem={({ item }) => (
-                                    <TouchableOpacity
-                                        style={s.patientItem}
-                                        onPress={() => {
-                                            setSelectedPatient(item);
-                                            setShowPatientPicker(false);
-                                        }}
-                                    >
-                                        <Text style={s.patientItemText}>
-                                            {item.last_name} {item.first_name}
-                                        </Text>
-                                        {item.birth_date && (
-                                            <Text style={s.patientItemDate}>{item.birth_date}</Text>
-                                        )}
-                                    </TouchableOpacity>
-                                )}
-                                contentContainerStyle={{ paddingBottom: 20 }}
-                            />
-                        </View>
+                        </KeyboardAvoidingView>
                     </View>
                 </Modal>
             </SafeAreaView>
@@ -481,11 +645,14 @@ const s = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'flex-end',
     },
+    modalKeyboard: {
+        width: '100%',
+    },
     modalContent: {
         backgroundColor: '#fff',
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
-        maxHeight: '80%',
+        maxHeight: '88%',
     },
     modalHeader: {
         flexDirection: 'row',
@@ -496,7 +663,8 @@ const s = StyleSheet.create({
         borderBottomColor: '#e2e8f0',
     },
     modalTitle: { fontSize: 18, fontWeight: '600', color: '#1f2937' },
-    modalBody: { padding: 16 },
+    modalBody: { paddingHorizontal: 16 },
+    modalBodyContent: { paddingTop: 4, paddingBottom: 20 },
     modalFooter: {
         flexDirection: 'row',
         padding: 16,
@@ -533,6 +701,69 @@ const s = StyleSheet.create({
     },
     pickerText: { fontSize: 15, color: '#1f2937' },
     pickerPlaceholder: { fontSize: 15, color: '#94a3b8' },
+    inlinePicker: {
+        marginTop: 8,
+        borderWidth: 1,
+        borderColor: '#dbeafe',
+        borderRadius: 12,
+        backgroundColor: '#fff',
+        overflow: 'hidden',
+    },
+    inlinePickerList: { maxHeight: 220 },
+    patientPickerItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f1f5f9',
+    },
+    patientPickerItemSelected: { backgroundColor: '#f0fdfa' },
+    patientPickerEmpty: {
+        padding: 14,
+        textAlign: 'center',
+        color: '#94a3b8',
+        fontSize: 14,
+    },
+    datePickerBtn: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: '#f8fafc',
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        borderRadius: 10,
+        padding: 12,
+    },
+    datePickerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    iosPickerFrame: {
+        marginTop: 8,
+        paddingBottom: 10,
+        borderWidth: 1,
+        borderColor: '#dbeafe',
+        borderRadius: 14,
+        backgroundColor: '#ffffff',
+        overflow: 'hidden',
+    },
+    iosPicker: {
+        height: 190,
+        backgroundColor: '#ffffff',
+    },
+    pickerDoneBtn: {
+        alignSelf: 'flex-end',
+        marginTop: 4,
+        marginRight: 10,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 8,
+        backgroundColor: MINT,
+    },
+    pickerDoneText: { color: '#fff', fontWeight: '700' },
     cancelButton: {
         flex: 1,
         paddingVertical: 14,

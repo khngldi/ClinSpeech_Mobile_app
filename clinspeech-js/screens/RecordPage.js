@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
     View, Text, TouchableOpacity, StyleSheet, FlatList,
     TextInput, ActivityIndicator, Alert, Animated, Easing, Dimensions, Image,
+    RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,6 +11,7 @@ import { Audio } from 'expo-av';
 import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 import { apiFetch, safeJson } from '../api';
 import { useLocale } from '../i18n/LocaleContext';
+import { getFriendlyApiError } from '../utils/apiErrors';
 
 const MINT = '#2ec4b6';
 const MINT_LIGHT = '#5eead4';
@@ -127,10 +129,11 @@ function PulsingRing({ delay }) {
 }
 
 export default function RecordPage({ navigation }) {
-    const { t } = useLocale();
+    const { t, formatDate } = useLocale();
     const [step, setStep] = useState(1);
     const [patients, setPatients] = useState([]);
     const [patientsLoading, setPatientsLoading] = useState(true);
+    const [patientsRefreshing, setPatientsRefreshing] = useState(false);
     const [patientSearch, setPatientSearch] = useState('');
     const [patientId, setPatientId] = useState(null);
 
@@ -155,13 +158,27 @@ export default function RecordPage({ navigation }) {
     const [autoProcess, setAutoProcess] = useState(true);
     const [error, setError] = useState('');
 
-    useEffect(() => {
-        apiFetch('/patients/')
+    const loadPatients = async (showLoader = true) => {
+        if (showLoader) setPatientsLoading(true);
+        try {
+            const data = await apiFetch('/patients/')
             .then(safeJson)
-            .then(data => setPatients(Array.isArray(data) ? data : (data?.results || [])))
-            .catch(() => {})
-            .finally(() => setPatientsLoading(false));
+            setPatients(Array.isArray(data) ? data : (data?.results || []));
+        } catch {
+        } finally {
+            setPatientsLoading(false);
+            setPatientsRefreshing(false);
+        }
+    };
+
+    useEffect(() => {
+        loadPatients();
     }, []);
+
+    const onPatientsRefresh = () => {
+        setPatientsRefreshing(true);
+        loadPatients(false);
+    };
 
     useEffect(() => {
         checkPermissions();
@@ -338,7 +355,7 @@ export default function RecordPage({ navigation }) {
             const res = await apiFetch('/consultations/', { method: 'POST', body: formData });
             if (!res.ok) {
                 const d = await safeJson(res);
-                throw new Error(typeof d === 'object' ? JSON.stringify(d) : t('Ошибка создания консультации'));
+                throw { status: res.status, payload: d };
             }
             const data = await safeJson(res);
             if (autoProcess && data.id) {
@@ -350,7 +367,8 @@ export default function RecordPage({ navigation }) {
                 }}
             ]);
         } catch (err) {
-            setError(err.message || t('Ошибка отправки'));
+            console.error('Consultation upload failed:', err);
+            setError(getFriendlyApiError(err, t, 'Ошибка отправки'));
         } finally { setUploading(false); }
     };
 
@@ -419,6 +437,7 @@ export default function RecordPage({ navigation }) {
                                     keyExtractor={item => String(item.id)}
                                     style={{ maxHeight: 300 }}
                                     showsVerticalScrollIndicator={false}
+                                    refreshControl={<RefreshControl refreshing={patientsRefreshing} onRefresh={onPatientsRefresh} tintColor={MINT} />}
                                     ListEmptyComponent={<Text style={st.emptyText}>{t('Пациенты не найдены')}</Text>}
                                     renderItem={({ item }) => (
                                         <TouchableOpacity
@@ -429,7 +448,7 @@ export default function RecordPage({ navigation }) {
                                                 <Text style={st.patientName}>
                                                     {item.last_name} {item.first_name} {item.middle_name || ''}
                                                 </Text>
-                                                <Text style={st.patientMeta}>{t('Дата рождения:')} {item.birth_date || '—'}</Text>
+                                                <Text style={st.patientMeta}>{t('Дата рождения:')} {item.birth_date ? formatDate(item.birth_date) : '—'}</Text>
                                             </View>
                                             {patientId === item.id && (
                                                 <Ionicons name="checkmark-circle" size={22} color={MINT} />
@@ -588,7 +607,7 @@ export default function RecordPage({ navigation }) {
                                     {uploading ? (
                                         <ActivityIndicator color="#fff" />
                                     ) : (
-                                        <Text style={st.submitText}>🚀 {t('Отправить')}</Text>
+                                        <Text style={st.submitText}>{t('Отправить')}</Text>
                                     )}
                                 </LinearGradient>
                             </TouchableOpacity>

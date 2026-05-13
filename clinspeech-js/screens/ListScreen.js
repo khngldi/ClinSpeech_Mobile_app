@@ -6,11 +6,13 @@ import {
     FlatList,
     TouchableOpacity,
     ActivityIndicator,
+    RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 import { apiFetch, safeJson } from '../api';
 import { useLocale } from '../i18n/LocaleContext';
+import StatusChip from '../components/StatusChip';
 
 const MINT = '#2ec4b6';
 
@@ -24,26 +26,32 @@ function formatDate(iso) {
 
 export default function ListScreen({ navigation }) {
     const { t } = useLocale();
-    const statusMap = {
-        pending:    { text: t('Ожидание'),  color: '#B0B0B0' },
-        processing: { text: t('Обработка'), color: '#F1C40F' },
-        done:       { text: t('Готово'),    color: '#2ECC71' },
-        error:      { text: t('Ошибка'),    color: '#E74C3C' },
-    };
-
     const [consultations, setConsultations] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
-    useEffect(() => {
-        apiFetch('/consultations/')
+    const loadConsultations = (showLoader = true) => {
+        if (showLoader) setLoading(true);
+        return apiFetch('/consultations/')
             .then(safeJson)
             .then(data => setConsultations(Array.isArray(data) ? data : data.results || []))
             .catch(() => {})
-            .finally(() => setLoading(false));
+            .finally(() => {
+                setLoading(false);
+                setRefreshing(false);
+            });
+    };
+
+    useEffect(() => {
+        loadConsultations();
     }, []);
 
+    const onRefresh = () => {
+        setRefreshing(true);
+        loadConsultations(false);
+    };
+
     const renderItem = ({ item }) => {
-        const status = statusMap[item.status] || { text: item.status, color: '#B0B0B0' };
         const patient = item.patient_info;
         const patientName = patient
             ? `${patient.last_name || ''} ${(patient.first_name || '')[0] || ''}.`
@@ -53,13 +61,10 @@ export default function ListScreen({ navigation }) {
             <TouchableOpacity
                 style={styles.card}
                 activeOpacity={0.8}
-                onPress={() => navigation.navigate('Detail', { consultation: item })}
+                onPress={() => navigation.navigate('Detail', { consultation: item, consultationId: item.id })}
             >
                 <View style={styles.cardHeader}>
-                    <View style={styles.statusRow}>
-                        <View style={[styles.statusDot, { backgroundColor: status.color }]} />
-                        <Text style={[styles.statusText, { color: status.color }]}>{status.text}</Text>
-                    </View>
+                    <StatusChip status={item.status} compact />
                     <Text style={styles.dateText}>{formatDate(item.created_at)}</Text>
                 </View>
 
@@ -78,7 +83,7 @@ export default function ListScreen({ navigation }) {
     return (
         <View style={styles.container}>
             <AnimatedGradientBackground />
-            <Text style={styles.title}>{t('Последние записи')}</Text>
+            <Text style={styles.title}>{t('Список записей')}</Text>
 
             {loading ? (
                 <ActivityIndicator size="large" color={MINT} style={{ marginTop: 40 }} />
@@ -90,6 +95,7 @@ export default function ListScreen({ navigation }) {
                         renderItem={renderItem}
                         contentContainerStyle={styles.list}
                         showsVerticalScrollIndicator
+                        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={MINT} />}
                         ListEmptyComponent={<Text style={styles.emptyText}>{t('Консультаций пока нет')}</Text>}
                     />
                 </View>

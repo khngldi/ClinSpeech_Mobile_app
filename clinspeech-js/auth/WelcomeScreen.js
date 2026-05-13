@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
+import { useLocale } from '../i18n/LocaleContext';
 
 const MINT = '#2ec4b6';
 const MINT_LIGHT = '#5eead4';
@@ -73,6 +74,7 @@ const FloatingShape = ({ icon, index }) => {
 };
 
 export default function WelcomeScreen({ navigation }) {
+    const { t } = useLocale();
     const shapes = [
         <FontAwesome5 name="heartbeat" size={22} color={MINT} />,
         <MaterialCommunityIcons name="pill" size={22} color={MINT_LIGHT} />,
@@ -89,7 +91,7 @@ export default function WelcomeScreen({ navigation }) {
             <View style={styles.content}>
 
                 {/* ЗАГОЛОВОК */}
-                <Text style={styles.title}>Добро пожаловать в{"\n"}<Text style={styles.titleAccent}>ClinSpeech</Text></Text>
+                <Text style={styles.title}>{t('Добро пожаловать в')}{'\n'}<Text style={styles.titleAccent}>ClinSpeech</Text></Text>
 
                 {/* ЦЕНТРАЛЬНЫЙ БЛОК */}
                 <View style={styles.logoContainer}>
@@ -109,9 +111,9 @@ export default function WelcomeScreen({ navigation }) {
                 {/* ОПИСАНИЕ */}
                 <View style={styles.descriptionContainer}>
                     <Text style={styles.descriptionText}>
-                        Интеллектуальная система преобразования{"\n"}
-                        медицинской речи в структурированные{"\n"}
-                        протоколы и отчеты.
+                        {t('Интеллектуальная система преобразования')}{'\n'}
+                        {t('медицинской речи в структурированные')}{'\n'}
+                        {t('протоколы и отчеты.')}
                     </Text>
                 </View>
 
@@ -122,7 +124,7 @@ export default function WelcomeScreen({ navigation }) {
                         activeOpacity={0.8}
                         onPress={() => navigation.navigate('Register')}
                     >
-                        <Text style={styles.regButtonText}>РЕГИСТРАЦИЯ</Text>
+                        <Text style={styles.regButtonText}>{t('РЕГИСТРАЦИЯ')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -130,7 +132,7 @@ export default function WelcomeScreen({ navigation }) {
                         activeOpacity={0.8}
                         onPress={() => navigation.navigate('Login')}
                     >
-                        <Text style={styles.loginButtonText}>ВХОД</Text>
+                        <Text style={styles.loginButtonText}>{t('ВХОД')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
